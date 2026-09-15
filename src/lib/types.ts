@@ -184,6 +184,18 @@ export interface CarrySuggestion {
 
 export type TimerAction = "start" | "pause" | "resume" | "stop" | "switch";
 
+/** Client-side shape for a plan row being saved (id optional = server assigns). */
+export interface PlanItemLike {
+  id?: string;
+  taskId: string;
+  subtaskId?: string;
+  plannedMinutes: number;
+  parallelGroup?: string;
+  order?: number;
+  carriedFrom?: string;
+  notes?: string;
+}
+
 export interface TimerActionResult {
   ok: boolean;
   action: TimerAction;
