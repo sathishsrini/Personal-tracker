@@ -335,6 +335,54 @@ export class GoogleSheetsDriver implements StorageDriver {
     });
   }
 
+  async claimBlankRows(table: TableName, computeDefaults: (row: Row) => Row | null): Promise<Row[]> {
+    await this.init();
+    return this.mutate(async () => {
+      const api = await this.getApi();
+      const { headers, keyToIndex } = this.cols(table);
+      const idKey = ALL_TABLES[table].idKey;
+      const idColIndex = keyToIndex.get(idKey) ?? 0;
+      const lastCol = colLetter(Math.max(headers.length - 1, 0));
+      // Fresh read, deliberately bypassing any cached view — row positions must be current.
+      const res = await withRetry(() =>
+        api.spreadsheets.values.get({
+          spreadsheetId: this.spreadsheetId,
+          range: `${ALL_TABLES[table].sheetTitle}!A2:${lastCol}`,
+          valueRenderOption: "UNFORMATTED_VALUE",
+        })
+      );
+      const rows = res.data.values ?? [];
+      const claimed: Row[] = [];
+      const data: { range: string; values: (string | number)[][] }[] = [];
+
+      rows.forEach((raw, i) => {
+        if (String(raw[idColIndex] ?? "").trim() !== "") return; // already has an id
+        const record = this.rowToRecord(table, raw);
+        const defaults = computeDefaults(record);
+        if (!defaults) return;
+        const merged = { ...record, ...defaults };
+        const sheetRow = i + 2;
+        for (const [key, value] of Object.entries(defaults)) {
+          const idx = keyToIndex.get(key);
+          if (idx === undefined) continue;
+          data.push({ range: `${ALL_TABLES[table].sheetTitle}!${colLetter(idx)}${sheetRow}`, values: [[cellValue(value ?? "")]] });
+        }
+        claimed.push(merged);
+      });
+
+      if (data.length > 0) {
+        await withRetry(() =>
+          api.spreadsheets.values.batchUpdate({
+            spreadsheetId: this.spreadsheetId,
+            requestBody: { valueInputOption: "RAW", data },
+          })
+        );
+        this.lastSyncedAt = Date.now();
+      }
+      return claimed;
+    });
+  }
+
   async deleteRow(table: TableName, idValue: string): Promise<boolean> {
     await this.init();
     return this.mutate(async () => {

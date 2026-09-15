@@ -174,6 +174,26 @@ export interface StorageInfo {
   error: string | null;
 }
 
+/** A plan item that didn't finish on an earlier day and is eligible to carry forward. */
+export interface CarrySuggestion {
+  sourceDate: string;
+  taskId: string;
+  plannedMinutes: number;
+  targetDate: string;
+}
+
+export type TimerAction = "start" | "pause" | "resume" | "stop" | "switch";
+
+export interface TimerActionResult {
+  ok: boolean;
+  action: TimerAction;
+  taskId: string;
+  /** Set when the op was rejected or could not change state. */
+  message?: string;
+  /** Set when an earlier identical op (opId) was already applied. */
+  alreadyApplied?: boolean;
+}
+
 export interface Snapshot {
   serverNow: number;
   storage: StorageInfo;
@@ -189,4 +209,5 @@ export interface Snapshot {
   statuses: StatusDef[];
   tags: LookupItem[];
   warnings: string[];
+  carry: CarrySuggestion[];
 }

@@ -27,7 +27,7 @@ export class LocalJsonDriver implements StorageDriver {
   private lastError: string | null = null;
   private lastSyncedAt: number | null = null;
 
-  constructor(filePath = path.join(process.cwd(), "data", "local-db.json")) {
+  constructor(filePath = process.env.TRACKER_LOCAL_DB ? path.resolve(process.env.TRACKER_LOCAL_DB) : path.join(process.cwd(), "data", "local-db.json")) {
     this.filePath = filePath;
   }
 
@@ -116,6 +116,21 @@ export class LocalJsonDriver implements StorageDriver {
       if (!row) return null;
       Object.assign(row, patch);
       return row;
+    });
+  }
+
+  async claimBlankRows(table: TableName, computeDefaults: (row: Row) => Row | null): Promise<Row[]> {
+    const idKey = ALL_TABLES[table].idKey;
+    return this.mutate((db) => {
+      const claimed: Row[] = [];
+      for (const row of db[table]) {
+        if (row[idKey]) continue;
+        const defaults = computeDefaults(row);
+        if (!defaults) continue;
+        Object.assign(row, defaults);
+        claimed.push(row);
+      }
+      return claimed;
     });
   }
 

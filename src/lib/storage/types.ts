@@ -26,4 +26,15 @@ export interface StorageDriver {
   updateRow(table: TableName, idValue: string, patch: Row): Promise<Row | null>;
 
   deleteRow(table: TableName, idValue: string): Promise<boolean>;
+
+  /**
+   * Backfills rows that were typed by hand and are missing their id/key
+   * column — the "just type a Task title" input path (requirement #15).
+   * Does a fresh read (never a cached one), calls `computeDefaults` for
+   * every row whose id column is still blank, and writes the result back to
+   * that exact row in place. Rows for which `computeDefaults` returns null
+   * are left untouched (e.g. a fully blank trailing line). Returns every
+   * row that was claimed, already merged with its patch.
+   */
+  claimBlankRows(table: TableName, computeDefaults: (row: Row) => Row | null): Promise<Row[]>;
 }
