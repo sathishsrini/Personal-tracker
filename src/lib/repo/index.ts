@@ -1,4 +1,6 @@
 export { addNote, archiveTask, createSubtask, createTask, deleteSubtask, deleteTaskPermanently, restoreTask, updateSubtask, updateTask } from "./tasks";
+export { addLookupItem, updateLookupItem, deactivateLookupItem, reactivateLookupItem } from "./lookups";
+export type { LookupTable } from "./lookups";
 export { timerAction, stopTimer, enforceConsistentEntries } from "./timer";
 export { createManualEntry, updateManualEntry, deleteEntry, findOverlap } from "./entries";
 export { carryForwardSuggestions, computeCarrySuggestions, readDailyPlan, readWeeklyPlan, replaceDailyPlan, replaceWeeklyPlan } from "./plans";

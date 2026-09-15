@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { startOfflineHandler } from "@/hooks/use-app";

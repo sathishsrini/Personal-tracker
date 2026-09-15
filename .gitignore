@@ -7,3 +7,4 @@ out
 next-env.d.ts
 /data/
 credentials/*.json
+dev.log
