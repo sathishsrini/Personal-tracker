@@ -1,0 +1,19 @@
+
+> my-own-tracker@0.1.0 dev
+> next dev -p 3000
+
+▲ Next.js 16.3.5 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://169.254.83.107:3000
+✓ Ready in 11.0s
+⚠ Warning: Next.js ignored package-lock.json in C:\Users\sathish because it is outside the current Git repository (C:\Users\sathish\dev-projects\my own tracker).
+ To use this directory, set `turbopack.root` in your Next.js config.
+
+✓ Running next.config.ts took 637ms
+
+ GET /api/snapshot 200 in 4.0s (next.js: 3.4s, application-code: 656ms)
+ POST /api/tasks 201 in 623ms (next.js: 512ms, application-code: 111ms)
+ POST /api/tasks/5fde7881-6049-460d-962c-9983ab576f87/timer 200 in 2.7s (next.js: 2.6s, application-code: 114ms)
+ POST /api/tasks/5fde7881-6049-460d-962c-9983ab576f87/timer 200 in 103ms (next.js: 29ms, application-code: 73ms)
+ POST /api/tasks/5fde7881-6049-460d-962c-9983ab576f87/status 200 in 2.7s (next.js: 2.6s, application-code: 62ms)
+ POST /api/entries 201 in 487ms (next.js: 409ms, application-code: 77ms)
