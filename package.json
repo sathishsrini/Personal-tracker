@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3000",
+    "dev:fresh": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start.ps1",
     "build": "next build",
     "start": "next start -p 3000",
+    "start:fresh": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start.ps1 -Mode start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "sheets:init": "tsx scripts/init-sheets.ts"
