@@ -243,8 +243,16 @@ export function deleteManualEntry(id: string): Promise<{ deleted: boolean }> {
 
 export type { PlanItemLike };
 
+export function fetchDailyPlan(date: string): Promise<DailyPlanItem[]> {
+  return req<DailyPlanItem[]>(`/api/plan/daily/${date}`, "GET");
+}
+
 export function saveDailyPlan(date: string, items: PlanItemLike[]): Promise<DailyPlanItem[]> {
   return req<DailyPlanItem[]>(`/api/plan/daily/${date}`, "POST", { items });
+}
+
+export function fetchWeeklyPlan(week: string): Promise<WeeklyPlanItem[]> {
+  return req<WeeklyPlanItem[]>(`/api/plan/weekly/${week}`, "GET");
 }
 
 export function saveWeeklyPlan(week: string, items: PlanItemLike[]): Promise<WeeklyPlanItem[]> {
@@ -253,4 +261,26 @@ export function saveWeeklyPlan(week: string, items: PlanItemLike[]): Promise<Wee
 
 export function carryForward(suggestions: CarrySuggestion[]): Promise<DailyPlanItem[]> {
   return req<DailyPlanItem[]>("/api/plan/carry", "POST", { suggestions });
+}
+
+// ---------------------------------------------------------------------------
+// lookups (Categories / Priorities / Statuses / ActivityTags)
+// ---------------------------------------------------------------------------
+
+export type LookupTableName = "Categories" | "Priorities" | "Statuses" | "ActivityTags";
+
+export function addLookupItem(table: LookupTableName, values: Record<string, string | number>): Promise<{ ok: boolean }> {
+  return req(`/api/lookups/${table}`, "POST", values);
+}
+
+export function updateLookupItem(table: LookupTableName, name: string, patch: Record<string, string | number | boolean>): Promise<{ ok: boolean }> {
+  return req(`/api/lookups/${table}/${encodeURIComponent(name)}`, "PATCH", patch);
+}
+
+export function deactivateLookupItem(table: LookupTableName, name: string): Promise<{ active: boolean }> {
+  return req(`/api/lookups/${table}/${encodeURIComponent(name)}`, "DELETE", {});
+}
+
+export function reactivateLookupItem(table: LookupTableName, name: string): Promise<{ active: boolean }> {
+  return req(`/api/lookups/${table}/${encodeURIComponent(name)}`, "DELETE", { restore: true });
 }
