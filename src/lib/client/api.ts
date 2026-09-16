@@ -168,6 +168,16 @@ export function deleteTaskPermanently(id: string): Promise<{ archived: boolean; 
   return req(`/api/tasks/${id}`, "DELETE", { mode: "permanent" });
 }
 
+export interface ReorderUpdateInput {
+  id: string;
+  order: number;
+  priority?: string;
+}
+
+export function reorderTasks(updates: ReorderUpdateInput[]): Promise<{ ok: boolean }> {
+  return req("/api/tasks/reorder", "POST", { updates });
+}
+
 // ---------------------------------------------------------------------------
 // subtasks + notes
 // ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import { parseDateKey, parseDuration, parseTimestamp, toLocalIso } from "./time";
+import { parseClockTime, parseDateKey, parseDuration, parseTimestamp, toLocalIso } from "./time";
 import type {
   DailyPlanItem,
   EndReason,
@@ -46,6 +46,7 @@ export function rowToTask(row: Row): Task {
     dueDate: row.dueDate ? parseDateKey(row.dueDate) : null,
     notes: row.notes ?? "",
     progress: toNumber(row.progress),
+    order: toNumber(row.order) ?? 0,
     createdAt: row.createdAt ?? "",
     updatedAt: row.updatedAt ?? "",
     completedAt: row.completedAt ?? "",
@@ -68,6 +69,7 @@ export function taskToRow(task: Partial<Task>): Row {
   if (task.dueDate !== undefined) row.dueDate = task.dueDate ?? "";
   if (task.notes !== undefined) row.notes = task.notes;
   if (task.progress !== undefined) row.progress = task.progress === null ? "" : String(task.progress);
+  if (task.order !== undefined) row.order = String(task.order);
   if (task.createdAt !== undefined) row.createdAt = task.createdAt;
   if (task.updatedAt !== undefined) row.updatedAt = task.updatedAt;
   if (task.completedAt !== undefined) row.completedAt = task.completedAt;
@@ -168,6 +170,8 @@ export function rowToDailyPlanItem(row: Row): DailyPlanItem {
     taskId: row.taskId ?? "",
     subtaskId: row.subtaskId ?? "",
     plannedMinutes: parseDuration(row.plannedMinutes) ?? 0,
+    startTime: parseClockTime(row.startTime),
+    endTime: parseClockTime(row.endTime),
     parallelGroup: row.parallelGroup ?? "",
     order: toNumber(row.order) ?? 0,
     carriedFrom: row.carriedFrom ?? "",
@@ -184,6 +188,8 @@ export function dailyPlanItemToRow(p: Partial<DailyPlanItem>): Row {
   if (p.taskId !== undefined) row.taskId = p.taskId;
   if (p.subtaskId !== undefined) row.subtaskId = p.subtaskId;
   if (p.plannedMinutes !== undefined) row.plannedMinutes = String(p.plannedMinutes);
+  if (p.startTime !== undefined) row.startTime = p.startTime;
+  if (p.endTime !== undefined) row.endTime = p.endTime;
   if (p.parallelGroup !== undefined) row.parallelGroup = p.parallelGroup;
   if (p.order !== undefined) row.order = String(p.order);
   if (p.carriedFrom !== undefined) row.carriedFrom = p.carriedFrom;

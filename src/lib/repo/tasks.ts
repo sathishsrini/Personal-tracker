@@ -48,6 +48,7 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
     dueDate: input.dueDate ?? null,
     notes: input.notes ?? "",
     progress: null,
+    order: Date.now(), // new tasks sort to the end of their priority group; drag-reorder overwrites with small sequential values
     createdAt: now,
     updatedAt: now,
     completedAt: "",
@@ -72,6 +73,7 @@ export interface UpdateTaskInput {
   dueDate?: string | null;
   notes?: string;
   progress?: number | null;
+  order?: number;
 }
 
 const FIELD_LABELS: Record<string, string> = {
@@ -126,7 +128,7 @@ export async function updateTask(id: string, patch: UpdateTaskInput): Promise<Ta
     await logHistory({ taskId: id, type: "status", field: "status", from: before.status, to: patch.status });
   }
   for (const key of changedKeys) {
-    if (key === "status") continue;
+    if (key === "status" || key === "order") continue; // order changes from drag-reordering aren't meaningful activity log entries
     await logHistory({
       taskId: id,
       type: "field",
@@ -137,6 +139,28 @@ export async function updateTask(id: string, patch: UpdateTaskInput): Promise<Ta
   }
 
   return next;
+}
+
+export interface ReorderUpdate {
+  id: string;
+  order: number;
+  /** Present only when the drag moved the card to a different priority column. */
+  priority?: string;
+}
+
+/**
+ * Applies a drag-and-drop reorder/re-prioritize in one pass: writes `order`
+ * (and `priority`, if the card changed columns) directly, skipping the
+ * generic change-detection/history logging in `updateTask` — a drag can
+ * touch every sibling's `order`, and neither the priority-column move nor
+ * the reshuffle is meaningful as its own activity-log line.
+ */
+export async function reorderTasks(updates: ReorderUpdate[]): Promise<void> {
+  const storage = getStorage();
+  const now = toLocalIso(Date.now());
+  await Promise.all(
+    updates.map((u) => storage.updateRow("Tasks", u.id, { order: String(u.order), ...(u.priority ? { priority: u.priority } : {}), updatedAt: now }))
+  );
 }
 
 export async function archiveTask(id: string): Promise<void> {

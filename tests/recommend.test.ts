@@ -17,6 +17,7 @@ function task(overrides: Partial<Task>): Task {
     dueDate: null,
     notes: "",
     progress: null,
+    order: 0,
     createdAt: "",
     updatedAt: "",
     completedAt: "",

@@ -62,6 +62,39 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
 const FIELD =
   "w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 focus:ring-zinc-900/10 disabled:bg-zinc-50";
 
+const SWATCHES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"];
+
+/** A hex color field: a native color-well swatch, a type-in hex box, and eight quick-pick presets. */
+export function ColorField({ value, onChange, className }: { value: string; onChange: (hex: string) => void; className?: string }) {
+  const swatch = /^#[0-9a-fA-F]{6}$/.test(value) ? value : "#898781";
+  return (
+    <div className={cn("space-y-1.5", className)}>
+      <div className="flex items-center gap-1.5">
+        <input
+          type="color"
+          value={swatch}
+          onChange={(e) => onChange(e.target.value)}
+          className="size-9 shrink-0 cursor-pointer rounded-md border border-zinc-200 p-0.5"
+          aria-label="Pick a color"
+        />
+        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="#2a78d6" className="min-w-0" />
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {SWATCHES.map((hex) => (
+          <button
+            key={hex}
+            type="button"
+            onClick={() => onChange(hex)}
+            title={hex}
+            className={cn("size-4 rounded-full ring-1 ring-inset ring-black/10", value.toLowerCase() === hex && "ring-2 ring-zinc-900")}
+            style={{ backgroundColor: hex }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function Field({ label, hint, children, className }: { label: string; hint?: string; children: ReactNode; className?: string }) {
   return (
     <label className={cn("block space-y-1.5", className)}>

@@ -57,6 +57,7 @@ export async function hydrateBareTasks(settings?: Settings): Promise<HydrationRe
       priority: row.priority || "Medium",
       category: row.category || resolvedSettings.defaultCategory,
       type: row.type || resolvedSettings.defaultType,
+      order: row.order || String(Date.now()),
       archived: row.archived || "false",
       createdAt: row.createdAt || now,
       updatedAt: now,

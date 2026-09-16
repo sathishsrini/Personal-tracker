@@ -37,6 +37,8 @@ export interface Task {
   dueDate: string | null;
   notes: string;
   progress: number | null;
+  /** Manual sort position within its priority group (lower = higher up); set by drag-and-drop reordering. */
+  order: number;
   createdAt: string;
   updatedAt: string;
   completedAt: string;
@@ -81,7 +83,10 @@ export interface DailyPlanItem {
   taskId: string;
   subtaskId: string;
   plannedMinutes: number;
-  /** Items sharing a group are worked concurrently: the group costs its longest item, not the sum. */
+  /** "HH:MM" 24h, or "" if this item is unscheduled (duration-only). When both are set, overlapping ranges are automatically treated as concurrent. */
+  startTime: string;
+  endTime: string;
+  /** Items sharing a group are worked concurrently: the group costs its longest item, not the sum. Manual alternative to startTime/endTime overlap for untimed items. */
   parallelGroup: string;
   order: number;
   carriedFrom: string;
@@ -190,6 +195,8 @@ export interface PlanItemLike {
   taskId: string;
   subtaskId?: string;
   plannedMinutes: number;
+  startTime?: string;
+  endTime?: string;
   parallelGroup?: string;
   order?: number;
   carriedFrom?: string;

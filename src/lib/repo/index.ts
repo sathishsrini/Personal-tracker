@@ -1,4 +1,4 @@
-export { addNote, archiveTask, createSubtask, createTask, deleteSubtask, deleteTaskPermanently, restoreTask, updateSubtask, updateTask } from "./tasks";
+export { addNote, archiveTask, createSubtask, createTask, deleteSubtask, deleteTaskPermanently, reorderTasks, restoreTask, updateSubtask, updateTask } from "./tasks";
 export { addLookupItem, updateLookupItem, deactivateLookupItem, reactivateLookupItem } from "./lookups";
 export type { LookupTable } from "./lookups";
 export { timerAction, stopTimer, enforceConsistentEntries } from "./timer";
@@ -9,6 +9,6 @@ export { buildSnapshot, hydrateBareTasks, parseBarePoint } from "./snapshot";
 export { logHistory } from "./history";
 export { newId } from "./ids";
 export type { CreateManualEntryInput, UpdateManualEntryInput } from "./entries";
-export type { CreateTaskInput, UpdateTaskInput, AddNoteInput, CreateSubtaskInput, UpdateSubtaskInput } from "./tasks";
+export type { CreateTaskInput, UpdateTaskInput, AddNoteInput, CreateSubtaskInput, UpdateSubtaskInput, ReorderUpdate } from "./tasks";
 export type { PlanItemInput } from "./plans";
 export type { TimerActionInput } from "./timer";

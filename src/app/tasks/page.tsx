@@ -4,8 +4,8 @@ import { useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckSquare2, Circle, Plus, Search } from "lucide-react";
-import { useSnapshot } from "@/hooks/use-app";
+import { CheckSquare2, Circle, LayoutGrid, List as ListIcon, Plus, Search } from "lucide-react";
+import { useSnapshot, useNow } from "@/hooks/use-app";
 import { createTask, setTaskStatus } from "@/lib/client/api";
 import { formatHM } from "@/lib/time";
 import { summarizeTaskTime } from "@/lib/domain/timer";
@@ -13,16 +13,19 @@ import { classifyQuadrant, QUADRANTS } from "@/lib/domain/quadrant";
 import { todayKey } from "@/lib/derive";
 import { PageShell, Button, Input, Select, Field, Card, Empty, cn } from "@/components/ui";
 import { QueryState } from "@/components/page-states";
-import { CategoryPill, EffortImpactTag, PriorityPill, StatusSelect } from "@/components/task-fragments";
+import { CategoryPill, EffortImpactTag, PriorityPill, StatusSelect, SubtaskBadge } from "@/components/task-fragments";
 import { TimerControl } from "@/components/timer-control";
+import { PriorityBoard } from "@/components/priority-board";
 
 const GROUP_ORDER: Record<string, number> = { todo: 0, active: 1, waiting: 2, done: 3, cancelled: 4 };
 
 export default function TasksPage() {
   const snap = useSnapshot();
+  const now = useNow(30_000);
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [group, setGroup] = useState("all");
+  const [view, setView] = useState<"list" | "board">("list");
   const [form, setForm] = useState({ title: "", description: "", category: "", priority: "Medium", type: "", effort: "", impact: "", estimate: "", due: "" });
   const qc = useQueryClient();
 
@@ -50,6 +53,7 @@ export default function TasksPage() {
 
   const categories = snap.data?.categories.map((c) => c.name) ?? [];
   const tasks = snap.data?.tasks ?? [];
+  const doneStatusName = snap.data?.statuses.find((s) => s.group === "done")?.name;
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -77,10 +81,28 @@ export default function TasksPage() {
       title="Task List"
       subtitle="Everything in one view — status, priority, time and quick timer control."
       actions={
-        <Button variant="primary" onClick={() => setShowForm((s) => !s)}>
-          <Plus className="size-4" />
-          New task
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 rounded-lg bg-zinc-100 p-1">
+            <button
+              onClick={() => setView("list")}
+              title="List view"
+              className={cn("rounded-md p-1.5 transition-colors", view === "list" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600")}
+            >
+              <ListIcon className="size-4" />
+            </button>
+            <button
+              onClick={() => setView("board")}
+              title="Board view — drag cards to reorder or re-prioritize"
+              className={cn("rounded-md p-1.5 transition-colors", view === "board" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600")}
+            >
+              <LayoutGrid className="size-4" />
+            </button>
+          </div>
+          <Button variant="primary" onClick={() => setShowForm((s) => !s)}>
+            <Plus className="size-4" />
+            New task
+          </Button>
+        </div>
       }
     >
       <QueryState isLoading={snap.isLoading} isError={snap.isError} error={snap.error}>
@@ -165,6 +187,8 @@ export default function TasksPage() {
 
         {visible.length === 0 ? (
           <Empty title="No tasks match" hint="Create one above, or type a Task right into the sheet and sync." />
+        ) : view === "board" && snap.data ? (
+          <PriorityBoard tasks={visible} snap={snap.data} now={now} />
         ) : (
           <Card className="p-0">
             <ul className="divide-y divide-zinc-100">
@@ -193,6 +217,10 @@ export default function TasksPage() {
                         <CategoryPill category={t.category} />
                         <EffortImpactTag effort={t.effort} impact={t.impact} />
                         <span className="size-2 rounded-full bg-zinc-200" style={quadDotStyle(t.effort, t.impact, snap.data?.settings.quadrantThreshold)} />
+                        <SubtaskBadge
+                          done={(snap.data?.subtasks ?? []).filter((s) => s.taskId === t.id && s.status === doneStatusName).length}
+                          total={(snap.data?.subtasks ?? []).filter((s) => s.taskId === t.id).length}
+                        />
                         {t.dueDate ? <span className={cn("text-xs tabular-nums text-zinc-400", t.dueDate < todayKey() && "font-medium text-red-500")}>{t.dueDate}</span> : null}
                       </div>
                     </div>

@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { ListChecks } from "lucide-react";
 import { setTaskStatus } from "@/lib/client/api";
 import type { Snapshot, Task } from "@/lib/types";
 import { Pill, Select, cn } from "./ui";
@@ -71,4 +72,16 @@ export function StatusSelect({
 export function EffortImpactTag({ effort, impact }: { effort: number | null; impact: number | null }) {
   if (effort === null && impact === null) return <span className="text-xs text-zinc-300">—</span>;
   return <span className="text-xs tabular-nums text-zinc-500">E{effort ?? "?"} · I{impact ?? "?"}</span>;
+}
+
+/** "3/5 subtasks" — a quick-glance progress badge, shown wherever a task appears in a list or board. */
+export function SubtaskBadge({ done, total }: { done: number; total: number }) {
+  if (total === 0) return null;
+  const complete = done === total;
+  return (
+    <span className={cn("inline-flex items-center gap-1 text-xs tabular-nums", complete ? "text-emerald-600" : "text-zinc-400")}>
+      <ListChecks className="size-3" />
+      {done}/{total}
+    </span>
+  );
 }
