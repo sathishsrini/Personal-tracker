@@ -8,6 +8,14 @@ import type { StorageDriver } from "./types";
 
 const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
 
+// gaxios (the HTTP client under googleapis) has NO default request timeout —
+// a connection that goes dead (a pooled keep-alive socket silently dropped by
+// a NAT/firewall/proxy, common on home networks) hangs forever instead of
+// erroring, since no timeout ever fires to abort it. Every call gets a hard
+// cap so a dead connection surfaces as a normal retryable error instead of
+// wedging the whole request indefinitely.
+const REQUEST_TIMEOUT_MS = 15_000;
+
 interface TableColumns {
   /** Header row exactly as it exists in the sheet (canonical columns + any of the user's own extra ones). */
   headers: string[];
@@ -40,7 +48,13 @@ async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Retries transient Sheets API failures (rate limiting, momentary 5xx) with backoff. */
+// gaxios reports a network-level failure (dead/reset connection, our own
+// REQUEST_TIMEOUT_MS abort, DNS blip) via a string `code` rather than an
+// HTTP status number — these are exactly as transient as a 429/5xx and
+// should be retried the same way.
+const RETRYABLE_ERROR_CODES = new Set(["ECONNRESET", "ETIMEDOUT", "ECONNREFUSED", "EPIPE", "ENOTFOUND", "TimeoutError", "AbortError"]);
+
+/** Retries transient Sheets API failures (rate limiting, momentary 5xx, dropped connections) with backoff. */
 async function withRetry<T>(fn: () => Promise<T>, attempts = 5): Promise<T> {
   let lastErr: unknown;
   for (let i = 0; i < attempts; i++) {
@@ -48,9 +62,10 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 5): Promise<T> {
       return await fn();
     } catch (err: unknown) {
       lastErr = err;
-      const code = (err as { code?: number; status?: number })?.code ?? (err as { status?: number })?.status;
-      const retryable = code === 429 || (typeof code === "number" && code >= 500);
+      const code = (err as { code?: number | string })?.code ?? (err as { status?: number })?.status;
+      const retryable = code === 429 || (typeof code === "number" && code >= 500) || (typeof code === "string" && RETRYABLE_ERROR_CODES.has(code));
       if (!retryable || i === attempts - 1) throw err;
+      console.warn(`[sheets] attempt ${i + 1} failed (${code}), retrying: ${err instanceof Error ? err.message : String(err)}`);
       await sleep(300 * 2 ** i + Math.random() * 200);
     }
   }
@@ -89,6 +104,8 @@ export class GoogleSheetsDriver implements StorageDriver {
   private api: sheets_v4.Sheets | null = null;
   private columns = new Map<TableName, TableColumns>();
   private initPromise: Promise<void> | null = null;
+  /** True while `ensureSchema()` itself is running, so its own reads/writes (e.g. seeding defaults) don't re-await `initPromise` and deadlock on themselves. */
+  private initializing = false;
   private queue: Promise<unknown> = Promise.resolve();
   private lastError: string | null = null;
   private lastSyncedAt: number | null = null;
@@ -110,13 +127,18 @@ export class GoogleSheetsDriver implements StorageDriver {
   private async getApi(): Promise<sheets_v4.Sheets> {
     if (!this.api) {
       const auth = await buildAuth();
-      this.api = sheetsFactory({ version: "v4", auth });
+      this.api = sheetsFactory({ version: "v4", auth, timeout: REQUEST_TIMEOUT_MS });
     }
     return this.api;
   }
 
   async init(): Promise<void> {
-    if (!this.initPromise) this.initPromise = this.ensureSchema();
+    if (!this.initPromise) {
+      this.initializing = true;
+      this.initPromise = this.ensureSchema().finally(() => {
+        this.initializing = false;
+      });
+    }
     try {
       await this.initPromise;
       this.lastError = null;
@@ -125,6 +147,18 @@ export class GoogleSheetsDriver implements StorageDriver {
       this.lastError = err instanceof Error ? err.message : String(err);
       throw err;
     }
+  }
+
+  /**
+   * Guards every read/write with auto-init, except when called from within
+   * `ensureSchema()` itself (e.g. `seedDefaultsIfEmpty`'s reads/writes): at
+   * that point `this.columns` is already populated (the header-mapping loop
+   * runs before seeding), so re-awaiting `initPromise` would just be awaiting
+   * the very call that's currently executing it — a permanent deadlock.
+   */
+  private async ensureReady(): Promise<void> {
+    if (this.initializing) return;
+    await this.init();
   }
 
   private async ensureSchema(): Promise<void> {
@@ -233,7 +267,7 @@ export class GoogleSheetsDriver implements StorageDriver {
   }
 
   async readTable(table: TableName): Promise<Row[]> {
-    await this.init();
+    await this.ensureReady();
     const api = await this.getApi();
     const { headers, sheetId } = this.cols(table);
     void sheetId;
@@ -248,7 +282,7 @@ export class GoogleSheetsDriver implements StorageDriver {
   }
 
   async readAll(): Promise<Record<TableName, Row[]>> {
-    await this.init();
+    await this.ensureReady();
     const api = await this.getApi();
     const tables = Object.keys(ALL_TABLES) as TableName[];
     const ranges = tables.map((t) => {
@@ -290,7 +324,7 @@ export class GoogleSheetsDriver implements StorageDriver {
   }
 
   async insertRows(table: TableName, values: Row[]): Promise<Row[]> {
-    await this.init();
+    await this.ensureReady();
     return this.mutate(async () => {
       const api = await this.getApi();
       const arrays = values.map((v) => this.recordToRowArray(table, v));
@@ -309,7 +343,7 @@ export class GoogleSheetsDriver implements StorageDriver {
   }
 
   async updateRow(table: TableName, idValue: string, patch: Row): Promise<Row | null> {
-    await this.init();
+    await this.ensureReady();
     return this.mutate(async () => {
       const api = await this.getApi();
       const rowIndex = await this.findRowIndex(table, idValue);
@@ -336,7 +370,7 @@ export class GoogleSheetsDriver implements StorageDriver {
   }
 
   async claimBlankRows(table: TableName, computeDefaults: (row: Row) => Row | null): Promise<Row[]> {
-    await this.init();
+    await this.ensureReady();
     return this.mutate(async () => {
       const api = await this.getApi();
       const { headers, keyToIndex } = this.cols(table);
@@ -384,7 +418,7 @@ export class GoogleSheetsDriver implements StorageDriver {
   }
 
   async deleteRow(table: TableName, idValue: string): Promise<boolean> {
-    await this.init();
+    await this.ensureReady();
     return this.mutate(async () => {
       const api = await this.getApi();
       const rowIndex = await this.findRowIndex(table, idValue);

@@ -142,13 +142,10 @@ export async function readWeeklyPlan(weekStart: string): Promise<WeeklyPlanItem[
  */
 export async function computeCarrySuggestions(fromDate: string, toDate: string, statuses: StatusDef[]): Promise<CarrySuggestion[]> {
   const storage = getStorage();
-  const [planRows, tasksRows, targetRows] = await Promise.all([
-    storage.readTable("DailyPlan"),
-    storage.readTable("Tasks"),
-    storage.readTable("DailyPlan"),
-  ]);
-  const plan = planRows.map(rowToDailyPlanItem).filter((p) => p.date === fromDate);
-  const targetTaskIds = new Set(targetRows.map(rowToDailyPlanItem).filter((p) => p.date === toDate).map((p) => p.taskId));
+  const [planRows, tasksRows] = await Promise.all([storage.readTable("DailyPlan"), storage.readTable("Tasks")]);
+  const allPlanItems = planRows.map(rowToDailyPlanItem);
+  const plan = allPlanItems.filter((p) => p.date === fromDate);
+  const targetTaskIds = new Set(allPlanItems.filter((p) => p.date === toDate).map((p) => p.taskId));
   const tasks = new Map(tasksRows.map((r) => [r.id, r]));
 
   return plan

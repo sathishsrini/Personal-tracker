@@ -11,7 +11,7 @@ import {
 } from "../mappers";
 import { getStorage } from "../storage";
 import { DAY_MS, dateKey, toLocalIso } from "../time";
-import type { Snapshot, StatusDef } from "../types";
+import type { Settings, Snapshot, StatusDef } from "../types";
 import { logHistory } from "./history";
 import { newId } from "./ids";
 import { computeCarrySuggestions } from "./plans";
@@ -44,9 +44,9 @@ interface HydrationResult {
  * bullets become real subtask rows. Runs on every snapshot so edits made in
  * Sheets appear in the app without any setup.
  */
-export async function hydrateBareTasks(): Promise<HydrationResult> {
+export async function hydrateBareTasks(settings?: Settings): Promise<HydrationResult> {
   const storage = getStorage();
-  const settings = await getSettings();
+  const resolvedSettings = settings ?? (await getSettings());
   const now = toLocalIso(Date.now());
 
   const claimed = await storage.claimBlankRows("Tasks", (row) => {
@@ -55,8 +55,8 @@ export async function hydrateBareTasks(): Promise<HydrationResult> {
       id: newId(),
       status: row.status || "Yet to Start",
       priority: row.priority || "Medium",
-      category: row.category || settings.defaultCategory,
-      type: row.type || settings.defaultType,
+      category: row.category || resolvedSettings.defaultCategory,
+      type: row.type || resolvedSettings.defaultType,
       archived: row.archived || "false",
       createdAt: row.createdAt || now,
       updatedAt: now,
@@ -111,13 +111,35 @@ function buildWarnings(tasks: ReturnType<typeof rowToTask>[], entries: ReturnTyp
   return warnings.slice(0, 5);
 }
 
-/** Full read model for the UI: every table mapped to domain objects, plus computed helpers. */
-export async function buildSnapshot(): Promise<Snapshot> {
+/**
+ * Full read model for the UI: every table mapped to domain objects, plus
+ * computed helpers.
+ *
+ * Concurrent callers share one in-flight build instead of each kicking off
+ * their own independent round of ~8 Sheets API calls. A page polling every
+ * 15s can otherwise easily have two requests in flight at once (a slow
+ * network hiccup, a manual sync click landing mid-poll); coalescing means
+ * whichever arrives second just waits for the first's result instead of
+ * doubling Sheets API traffic for no benefit — both would return the same
+ * data anyway.
+ */
+let inFlight: Promise<Snapshot> | null = null;
+
+export function buildSnapshot(): Promise<Snapshot> {
+  if (!inFlight) {
+    inFlight = buildSnapshotUncached().finally(() => {
+      inFlight = null;
+    });
+  }
+  return inFlight;
+}
+
+async function buildSnapshotUncached(): Promise<Snapshot> {
   const storage = getStorage();
   await storage.init();
   const settings = await getSettings();
   await enforceConsistentEntries(settings);
-  await hydrateBareTasks();
+  await hydrateBareTasks(settings);
 
   const all = await storage.readAll();
   const tasks = all.Tasks.map(rowToTask).filter((t) => t.id);
