@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Download, Printer } from "lucide-react";
 import { useSnapshot, useNow } from "@/hooks/use-app";
+import { downloadTextFile, sectionsToCsv } from "@/lib/csv";
 import {
   categoryTotalsInRange,
   currentWeekStart,
@@ -25,7 +27,7 @@ import {
 import { QUADRANTS } from "@/lib/domain/quadrant";
 import { formatHM, formatHMS } from "@/lib/time";
 import type { Snapshot } from "@/lib/types";
-import { Card, Empty, PageShell, Select, SectionHeading, cn } from "@/components/ui";
+import { Button, Card, Empty, PageShell, Select, SectionHeading, cn } from "@/components/ui";
 import { QueryState } from "@/components/page-states";
 import { StatCard, HBar } from "@/components/charts";
 import { PriorityPill } from "@/components/task-fragments";
@@ -80,8 +82,59 @@ function ReportsBody({ snap }: { snap: Snapshot }) {
   const overruns = overrunTasks(snap, now).slice(0, 8);
   const carriedToday = snap.dailyPlan.filter((p) => p.date === today && p.carriedFrom);
 
+  function exportCsv() {
+    const csv = sectionsToCsv([
+      {
+        title: "Summary",
+        headers: ["Metric", "Value"],
+        rows: [
+          ["Total tasks", live.length],
+          ["In progress", byGroup.get("active") ?? 0],
+          ["Blocked / waiting", byGroup.get("waiting") ?? 0],
+          ["Completed", byGroup.get("done") ?? 0],
+          ["Overdue", overdue.length],
+        ],
+      },
+      {
+        title: "Daily productivity (today)",
+        headers: ["Planned (min)", "Actual (sec)", "Utilization %"],
+        rows: [[todaySummary.plannedMinutes, todayActual, utilPct(todayActual, todaySummary.plannedMinutes)]],
+      },
+      {
+        title: "Weekly productivity (this week)",
+        headers: ["Planned (min)", "Actual (sec)", "Utilization %"],
+        rows: [[weeklyPlanned, weeklyActual, utilPct(weeklyActual, weeklyPlanned)]],
+      },
+      { title: `Time by activity tag (${rangeLabel(range)})`, headers: ["Tag", "Seconds"], rows: tagTotals.map((t) => [t.key, t.seconds]) },
+      { title: `Time by category (${rangeLabel(range)})`, headers: ["Category", "Seconds"], rows: categoryTotals.map((t) => [t.key, t.seconds]) },
+      { title: `Time by priority (${rangeLabel(range)})`, headers: ["Priority", "Seconds"], rows: priorityTotals.map((t) => [t.key, t.seconds]) },
+      { title: "Effort vs impact", headers: ["Quadrant", "Task count"], rows: buckets.map((b) => [QUADRANTS[b.id].label, b.tasks.length]) },
+      { title: "Overdue tasks", headers: ["Task", "Priority", "Due date"], rows: overdue.map((t) => [t.title, t.priority, t.dueDate ?? ""]) },
+      {
+        title: "Tasks exceeding estimate",
+        headers: ["Task", "Estimate (min)", "Actual (sec)", "Overrun (sec)"],
+        rows: overruns.map((o) => [o.task.title, o.estimateMinutes, o.actualSeconds, o.overrunSeconds]),
+      },
+      {
+        title: "Carried into today",
+        headers: ["Task", "Carried from"],
+        rows: carriedToday.map((p) => [snap.tasks.find((t) => t.id === p.taskId)?.title ?? "Unknown", p.carriedFrom]),
+      },
+    ]);
+    downloadTextFile(`report-${today}.csv`, csv);
+  }
+
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-end gap-2 print:hidden">
+        <Button variant="secondary" size="sm" onClick={exportCsv}>
+          <Download className="size-3.5" /> Export CSV
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => window.print()}>
+          <Printer className="size-3.5" /> Print / Save as PDF
+        </Button>
+      </div>
+
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <StatCard label="Total tasks" value={String(live.length)} />
         <StatCard label="In progress" value={String(byGroup.get("active") ?? 0)} tone="good" />

@@ -24,3 +24,15 @@ body {
 ::selection {
   background-color: rgba(24, 24, 27, 0.12);
 }
+
+@media print {
+  body {
+    background-color: #fff;
+  }
+  .shadow-sm,
+  .shadow-lg,
+  .shadow-xl,
+  .shadow-2xl {
+    box-shadow: none !important;
+  }
+}

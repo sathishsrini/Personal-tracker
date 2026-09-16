@@ -37,7 +37,7 @@ function SyncButton() {
     <button
       onClick={() => void sync.mutate()}
       className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800"
-      title="Re-read the spreadsheet now"
+      title="Sync now — re-checks the spreadsheet's columns and refreshes all data"
     >
       <RefreshCw className={cn("size-3.5", sync.isPending && "animate-spin")} />
       <span className="hidden sm:inline">Sync</span>
@@ -132,7 +132,7 @@ function Sidebar() {
   const groups: ("Plan" | "Track" | "Review")[] = ["Plan", "Track", "Review"];
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-20 flex w-16 flex-col border-r border-zinc-200 bg-white md:w-60">
+    <aside className="fixed inset-y-0 left-0 z-20 flex w-16 flex-col border-r border-zinc-200 bg-white md:w-60 print:hidden">
       <Brand />
       <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-2 md:px-3">
         {groups.map((section) => (
@@ -182,8 +182,8 @@ export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen">
       <Sidebar />
-      <div className="ml-16 md:ml-60">
-        <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-zinc-200 bg-zinc-50/90 px-4 py-3 backdrop-blur md:px-6">
+      <div className="ml-16 md:ml-60 print:ml-0">
+        <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-zinc-200 bg-zinc-50/90 px-4 py-3 backdrop-blur md:px-6 print:hidden">
           <h1 className="text-sm font-semibold text-zinc-800">{titleFor(pathname)}</h1>
           <div className="flex items-center gap-2">
             <span className="hidden text-xs text-zinc-400 sm:block">{formatDateLabel(dateKey(), "long")}</span>
