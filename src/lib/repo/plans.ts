@@ -1,6 +1,6 @@
 import { dailyPlanItemToRow, rowToDailyPlanItem, rowToWeeklyPlanItem, weeklyPlanItemToRow } from "../mappers";
 import { getStorage } from "../storage";
-import { toLocalIso } from "../time";
+import { parseClockTime, toLocalIso } from "../time";
 import type { StorageDriver } from "../storage/types";
 import type { CarrySuggestion, DailyPlanItem, StatusDef, WeeklyPlanItem } from "../types";
 import { logHistory } from "./history";
@@ -11,6 +11,8 @@ export interface PlanItemInput {
   taskId: string;
   subtaskId?: string;
   plannedMinutes: number;
+  startTime?: string;
+  endTime?: string;
   parallelGroup?: string;
   order?: number;
   carriedFrom?: string;
@@ -20,6 +22,18 @@ export interface PlanItemInput {
 function isDoneStatus(name: string, statuses: StatusDef[]): boolean {
   const def = statuses.find((s) => s.name === name);
   return def?.group === "done" || def?.group === "cancelled" || name === "Completed" || name === "Closed" || name === "Cancelled";
+}
+
+/** When both ends of a time range are set, the range is the source of truth for the item's duration — "11 to 12" means 60 minutes, whatever a stale plannedMinutes said. */
+function resolveTimedItem(item: PlanItemInput): { startTime: string; endTime: string; plannedMinutes: number } {
+  const startTime = parseClockTime(item.startTime);
+  const endTime = parseClockTime(item.endTime);
+  if (!startTime || !endTime) return { startTime, endTime, plannedMinutes: Math.max(0, item.plannedMinutes) };
+  const [sh, sm] = startTime.split(":").map(Number);
+  const [eh, em] = endTime.split(":").map(Number);
+  const minutes = eh * 60 + em - (sh * 60 + sm);
+  if (minutes <= 0) throw new Error(`End time (${endTime}) must be after start time (${startTime})`);
+  return { startTime, endTime, plannedMinutes: minutes };
 }
 
 /**
@@ -44,10 +58,11 @@ async function reconcileDaily(storage: StorageDriver, date: string, items: PlanI
 
   for (const item of withIds) {
     seen.add(item.id!);
+    const timed = resolveTimedItem(item);
     const patch: Partial<DailyPlanItem> = {
       taskId: item.taskId,
       subtaskId: item.subtaskId ?? "",
-      plannedMinutes: Math.max(0, item.plannedMinutes),
+      ...timed,
       parallelGroup: item.parallelGroup ?? "",
       order: item.order ?? 0,
       carriedFrom: item.carriedFrom ?? "",
@@ -63,8 +78,21 @@ async function reconcileDaily(storage: StorageDriver, date: string, items: PlanI
 
   // Items without an id (newly added client-side) get one assigned server-side.
   for (const item of items.filter((i) => !i.id)) {
-    const created = { ...item, id: newId(), date, createdAt: now, updatedAt: now };
-    await storage.insertRow("DailyPlan", dailyPlanItemToRow({ ...created, plannedMinutes: Math.max(0, created.plannedMinutes) } as DailyPlanItem));
+    const timed = resolveTimedItem(item);
+    const created: DailyPlanItem = {
+      id: newId(),
+      date,
+      taskId: item.taskId,
+      subtaskId: item.subtaskId ?? "",
+      ...timed,
+      parallelGroup: item.parallelGroup ?? "",
+      order: item.order ?? 0,
+      carriedFrom: item.carriedFrom ?? "",
+      notes: item.notes ?? "",
+      createdAt: now,
+      updatedAt: now,
+    };
+    await storage.insertRow("DailyPlan", dailyPlanItemToRow(created));
   }
 
   for (const p of existing) {

@@ -86,6 +86,11 @@ export class LocalJsonDriver implements StorageDriver {
     await seedDefaultsIfEmpty(this);
   }
 
+  /** No schema/column cache to invalidate for the local driver — re-seeding is all init() ever does. */
+  async resync(): Promise<void> {
+    await this.init();
+  }
+
   async readTable(table: TableName): Promise<Row[]> {
     const db = await this.load();
     return db[table];

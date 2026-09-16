@@ -10,8 +10,16 @@ import type { Row, StorageInfo, TableName } from "../types";
 export interface StorageDriver {
   readonly kind: "sheets" | "local";
 
-  /** Ensures tabs/headers/default lookup rows exist. Safe to call repeatedly. */
+  /** Ensures tabs/headers/default lookup rows exist. Safe to call repeatedly — a no-op once it has already succeeded. */
   init(): Promise<void>;
+
+  /**
+   * Forces a fresh schema check even if `init()` already succeeded — picks
+   * up columns renamed/added by hand directly in the sheet since the app
+   * last connected. Row data itself is always read fresh on every request
+   * regardless; this only affects the cached header/column mapping.
+   */
+  resync(): Promise<void>;
 
   getInfo(): StorageInfo;
 

@@ -149,6 +149,11 @@ export class GoogleSheetsDriver implements StorageDriver {
     }
   }
 
+  async resync(): Promise<void> {
+    this.initPromise = null; // drop the cached success so init() re-runs ensureSchema for real
+    await this.init();
+  }
+
   /**
    * Guards every read/write with auto-init, except when called from within
    * `ensureSchema()` itself (e.g. `seedDefaultsIfEmpty`'s reads/writes): at

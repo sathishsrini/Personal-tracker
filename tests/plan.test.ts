@@ -6,6 +6,8 @@ const base: Omit<DailyPlanItem, "id" | "plannedMinutes" | "parallelGroup"> = {
   date: "2026-09-15",
   taskId: "t1",
   subtaskId: "",
+  startTime: "",
+  endTime: "",
   order: 0,
   carriedFrom: "",
   notes: "",
@@ -15,6 +17,10 @@ const base: Omit<DailyPlanItem, "id" | "plannedMinutes" | "parallelGroup"> = {
 
 function item(id: string, minutes: number, group = ""): DailyPlanItem {
   return { ...base, id, plannedMinutes: minutes, parallelGroup: group, taskId: id };
+}
+
+function timedItem(id: string, startTime: string, endTime: string): DailyPlanItem {
+  return { ...base, id, taskId: id, plannedMinutes: 0, parallelGroup: "", startTime, endTime };
 }
 
 describe("summarizePlan", () => {
@@ -41,5 +47,21 @@ describe("summarizePlan", () => {
     const s = summarizePlan([item("A", 60), item("B", 30, "g"), item("C", 45, "g")], 8 * 60);
     // A (60) + max(B=30, C=45) = 105
     expect(s.plannedMinutes).toBe(105);
+  });
+
+  it("charges the wall-clock union for overlapping time slots, not the sum", () => {
+    // 11:00-12:00 and 11:30-12:30 overlap by 30m; union span is 11:00-12:30 = 90m
+    const s = summarizePlan([timedItem("A", "11:00", "12:00"), timedItem("B", "11:30", "12:30")], 8 * 60);
+    expect(s.plannedMinutes).toBe(90);
+  });
+
+  it("keeps back-to-back (touching, non-overlapping) time slots sequential", () => {
+    const s = summarizePlan([timedItem("A", "11:00", "12:00"), timedItem("B", "12:00", "13:00")], 8 * 60);
+    expect(s.plannedMinutes).toBe(120);
+  });
+
+  it("mixes timed and untimed items independently", () => {
+    const s = summarizePlan([timedItem("A", "09:00", "10:00"), item("B", 45)], 8 * 60);
+    expect(s.plannedMinutes).toBe(60 + 45);
   });
 });

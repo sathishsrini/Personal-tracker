@@ -12,6 +12,8 @@ function parseItems(b: Record<string, unknown>): PlanItemInput[] {
       taskId: String(item.taskId ?? ""),
       subtaskId: typeof item.subtaskId === "string" ? item.subtaskId : undefined,
       plannedMinutes: Math.max(0, Number(item.plannedMinutes ?? 0) || 0),
+      startTime: typeof item.startTime === "string" ? item.startTime : undefined,
+      endTime: typeof item.endTime === "string" ? item.endTime : undefined,
       parallelGroup: typeof item.parallelGroup === "string" ? item.parallelGroup : undefined,
       order: typeof item.order === "number" ? item.order : Number(item.order) || 0,
       carriedFrom: typeof item.carriedFrom === "string" ? item.carriedFrom : undefined,

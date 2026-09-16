@@ -4,12 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertTriangle, ChevronLeft, ChevronRight, MoveRight, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Clock, MoveRight, Plus, Trash2 } from "lucide-react";
 import { useSnapshot } from "@/hooks/use-app";
 import { fetchDailyPlan, saveDailyPlan, carryForward, type PlanItemLike } from "@/lib/client/api";
 import { summarizePlan } from "@/lib/domain/plan";
 import { entrySeconds } from "@/lib/domain/timer";
-import { addDays, dateKey, formatDateLabel, formatHM, formatHMS } from "@/lib/time";
+import { addDays, dateKey, formatDateLabel, formatHM, formatHMS, hmToMinutes } from "@/lib/time";
 import { isActionable } from "@/lib/derive";
 import type { Snapshot } from "@/lib/types";
 import { Button, Card, Empty, PageShell, Select, SectionHeading, Input, cn } from "@/components/ui";
@@ -24,7 +24,7 @@ export default function DailyPlannerPage() {
   return (
     <PageShell
       title="Daily Planner"
-      subtitle="Allocate your workday. Give two tasks the same group to plan them concurrently."
+      subtitle={'Give a task a time slot ("11:00 to 12:00") to schedule it, or just a duration. Overlapping slots count as concurrent automatically.'}
       actions={<DateNav date={date} onChange={setDate} />}
     >
       <QueryState isLoading={snap.isLoading} isError={snap.isError} error={snap.error}>
@@ -53,11 +53,22 @@ function DateNav({ date, onChange }: { date: string; onChange: (d: string) => vo
   );
 }
 
+/** Derives plannedMinutes from a start/end pair when both are set; otherwise keeps whatever duration was given. */
+function resolveDuration(item: PlanItemLike): number {
+  if (item.startTime && item.endTime) {
+    const mins = hmToMinutes(item.endTime) - hmToMinutes(item.startTime);
+    return mins > 0 ? mins : 0;
+  }
+  return item.plannedMinutes;
+}
+
 function DailyPlannerBody({ snap, date }: { snap: Snapshot; date: string }) {
   const qc = useQueryClient();
   const query = useQuery({ queryKey: ["daily-plan", date], queryFn: () => fetchDailyPlan(date) });
   const [items, setItems] = useState<PlanItemLike[]>([]);
   const [taskPick, setTaskPick] = useState("");
+  const [startInput, setStartInput] = useState("");
+  const [endInput, setEndInput] = useState("");
   const [durationInput, setDurationInput] = useState("60");
   const [groupInput, setGroupInput] = useState("");
 
@@ -71,7 +82,10 @@ function DailyPlannerBody({ snap, date }: { snap: Snapshot; date: string }) {
       qc.setQueryData(["daily-plan", date], saved);
       qc.invalidateQueries({ queryKey: ["snapshot"] });
     },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save plan"),
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Could not save plan");
+      qc.invalidateQueries({ queryKey: ["daily-plan", date] }); // roll the optimistic edit back to the last good state
+    },
   });
 
   const carryMutation = useMutation({
@@ -86,13 +100,28 @@ function DailyPlannerBody({ snap, date }: { snap: Snapshot; date: string }) {
   const taskInfo = useMemo(() => new Map(snap.tasks.map((t) => [t.id, t])), [snap.tasks]);
   const plannedTaskIds = new Set(items.map((i) => i.taskId));
   const pickable = snap.tasks.filter((t) => isActionable(t, snap) && !plannedTaskIds.has(t.id));
+
+  const sortedItems = useMemo(
+    () =>
+      items
+        .map((item, idx) => ({ item, idx }))
+        .sort((a, b) => {
+          const at = a.item.startTime ? hmToMinutes(a.item.startTime) : Infinity;
+          const bt = b.item.startTime ? hmToMinutes(b.item.startTime) : Infinity;
+          return at - bt;
+        }),
+    [items]
+  );
+
   const summary = summarizePlan(
     items.map((i, idx) => ({
       id: i.id ?? `draft-${idx}`,
       date,
       taskId: i.taskId,
       subtaskId: i.subtaskId ?? "",
-      plannedMinutes: i.plannedMinutes,
+      plannedMinutes: resolveDuration(i),
+      startTime: i.startTime ?? "",
+      endTime: i.endTime ?? "",
       parallelGroup: i.parallelGroup ?? "",
       order: i.order ?? idx,
       carriedFrom: i.carriedFrom ?? "",
@@ -111,10 +140,21 @@ function DailyPlannerBody({ snap, date }: { snap: Snapshot; date: string }) {
   }
 
   function addItem() {
-    const minutes = Math.round(Number(durationInput) || 0);
-    if (!taskPick || minutes <= 0) return;
-    persist([...items, { taskId: taskPick, plannedMinutes: minutes, parallelGroup: groupInput.trim(), order: items.length }]);
+    if (!taskPick) return;
+    if (startInput && endInput) {
+      if (hmToMinutes(endInput) <= hmToMinutes(startInput)) {
+        toast.error(`End time (${endInput}) must be after start time (${startInput})`);
+        return;
+      }
+      persist([...items, { taskId: taskPick, plannedMinutes: hmToMinutes(endInput) - hmToMinutes(startInput), startTime: startInput, endTime: endInput, order: items.length }]);
+    } else {
+      const minutes = Math.round(Number(durationInput) || 0);
+      if (minutes <= 0) return;
+      persist([...items, { taskId: taskPick, plannedMinutes: minutes, parallelGroup: groupInput.trim(), order: items.length }]);
+    }
     setTaskPick("");
+    setStartInput("");
+    setEndInput("");
     setDurationInput("60");
     setGroupInput("");
   }
@@ -166,14 +206,15 @@ function DailyPlannerBody({ snap, date }: { snap: Snapshot; date: string }) {
       <Card>
         <SectionHeading title={`Plan for ${formatDateLabel(date, "long")}`} />
         {items.length === 0 ? (
-          <Empty title="Nothing planned yet" hint="Pick a task below and give it a slice of your day." />
+          <Empty title="Nothing planned yet" hint='Pick a task below and give it a time slot, like 11:00 to 12:00.' />
         ) : (
           <ul className="mb-4 divide-y divide-zinc-100">
-            {items.map((item, idx) => {
+            {sortedItems.map(({ item, idx }) => {
               const task = taskInfo.get(item.taskId);
               const tracked = snap.entries
                 .filter((e) => e.taskId === item.taskId && e.date === date)
                 .reduce((s, e) => s + entrySeconds(e, now), 0);
+              const timed = Boolean(item.startTime && item.endTime);
               return (
                 <li key={item.id ?? idx} className="flex flex-wrap items-center gap-2.5 py-2.5">
                   <div className="min-w-0 flex-1">
@@ -189,22 +230,61 @@ function DailyPlannerBody({ snap, date }: { snap: Snapshot; date: string }) {
                       <span className="text-xs tabular-nums text-zinc-400">tracked {formatHM(tracked)}</span>
                     </div>
                   </div>
-                  <Input
-                    type="number"
-                    min={5}
-                    step={5}
-                    defaultValue={item.plannedMinutes}
-                    onBlur={(e) => updateItem(idx, { plannedMinutes: Math.max(0, Number(e.target.value) || 0) })}
-                    className="w-20"
-                    aria-label="Planned minutes"
-                  />
-                  <Input
-                    defaultValue={item.parallelGroup ?? ""}
-                    onBlur={(e) => updateItem(idx, { parallelGroup: e.target.value.trim() })}
-                    placeholder="Group (concurrent)"
-                    className="w-36"
-                    aria-label="Parallel group"
-                  />
+
+                  {timed ? (
+                    <div className="flex items-center gap-1">
+                      <Clock className="size-3.5 text-zinc-300" />
+                      <Input
+                        type="time"
+                        defaultValue={item.startTime}
+                        onBlur={(e) => {
+                          if (!e.target.value) return;
+                          if (item.endTime && hmToMinutes(item.endTime) <= hmToMinutes(e.target.value)) {
+                            toast.error("Start time must be before end time");
+                            return;
+                          }
+                          updateItem(idx, { startTime: e.target.value, plannedMinutes: item.endTime ? hmToMinutes(item.endTime) - hmToMinutes(e.target.value) : item.plannedMinutes });
+                        }}
+                        className="w-28"
+                        aria-label="Start time"
+                      />
+                      <span className="text-xs text-zinc-400">to</span>
+                      <Input
+                        type="time"
+                        defaultValue={item.endTime}
+                        onBlur={(e) => {
+                          if (!e.target.value) return;
+                          if (item.startTime && hmToMinutes(e.target.value) <= hmToMinutes(item.startTime)) {
+                            toast.error("End time must be after start time");
+                            return;
+                          }
+                          updateItem(idx, { endTime: e.target.value, plannedMinutes: item.startTime ? hmToMinutes(e.target.value) - hmToMinutes(item.startTime) : item.plannedMinutes });
+                        }}
+                        className="w-28"
+                        aria-label="End time"
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <Input
+                        type="number"
+                        min={5}
+                        step={5}
+                        defaultValue={item.plannedMinutes}
+                        onBlur={(e) => updateItem(idx, { plannedMinutes: Math.max(0, Number(e.target.value) || 0) })}
+                        className="w-20"
+                        aria-label="Planned minutes"
+                      />
+                      <Input
+                        defaultValue={item.parallelGroup ?? ""}
+                        onBlur={(e) => updateItem(idx, { parallelGroup: e.target.value.trim() })}
+                        placeholder="Group (concurrent)"
+                        className="w-36"
+                        aria-label="Parallel group"
+                      />
+                    </>
+                  )}
+
                   {task ? <TimerControl taskId={task.id} entries={snap.entries.filter((e) => e.taskId === task.id)} tags={snap.tags.map((t) => t.name)} compact /> : null}
                   <button onClick={() => removeItem(idx)} className="text-zinc-300 hover:text-red-500" aria-label="Remove from plan">
                     <Trash2 className="size-4" />
@@ -230,8 +310,30 @@ function DailyPlannerBody({ snap, date }: { snap: Snapshot; date: string }) {
               </option>
             ))}
           </Select>
-          <Input type="number" min={5} step={5} value={durationInput} onChange={(e) => setDurationInput(e.target.value)} className="w-24" aria-label="Minutes" />
-          <Input value={groupInput} onChange={(e) => setGroupInput(e.target.value)} placeholder="Group (optional)" className="w-40" />
+          <div className="flex items-center gap-1">
+            <Input type="time" value={startInput} onChange={(e) => setStartInput(e.target.value)} className="w-28" aria-label="Start time" />
+            <span className="text-xs text-zinc-400">to</span>
+            <Input type="time" value={endInput} onChange={(e) => setEndInput(e.target.value)} className="w-28" aria-label="End time" />
+          </div>
+          <span className="text-xs text-zinc-300">or</span>
+          <Input
+            type="number"
+            min={5}
+            step={5}
+            value={durationInput}
+            onChange={(e) => setDurationInput(e.target.value)}
+            disabled={Boolean(startInput && endInput)}
+            className="w-24"
+            aria-label="Minutes"
+            title="Duration in minutes (used when no time slot is set)"
+          />
+          <Input
+            value={groupInput}
+            onChange={(e) => setGroupInput(e.target.value)}
+            disabled={Boolean(startInput && endInput)}
+            placeholder="Group (optional)"
+            className="w-40"
+          />
           <Button type="submit" variant="primary" disabled={!taskPick}>
             <Plus className="size-4" /> Add
           </Button>
