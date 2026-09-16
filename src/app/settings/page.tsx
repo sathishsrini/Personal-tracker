@@ -5,9 +5,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, RotateCcw } from "lucide-react";
 import { useSnapshot, useSync } from "@/hooks/use-app";
-import { addLookupItem, deactivateLookupItem, reactivateLookupItem, updateSettings, type LookupTableName } from "@/lib/client/api";
+import { addLookupItem, deactivateLookupItem, reactivateLookupItem, updateLookupItem, updateSettings, type LookupTableName } from "@/lib/client/api";
 import type { RecommendationWeights, Settings, Snapshot } from "@/lib/types";
-import { Button, Card, Field, Input, PageShell, Pill, Select, SectionHeading, cn } from "@/components/ui";
+import { Button, Card, ColorField, Field, Input, PageShell, Pill, Select, SectionHeading, cn } from "@/components/ui";
 import { QueryState } from "@/components/page-states";
 
 const WEEKDAYS = [
@@ -222,6 +222,12 @@ function LookupsCard({ snap }: { snap: Snapshot }) {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not update"),
   });
 
+  const recolor = useMutation({
+    mutationFn: ({ name, color }: { name: string; color: string }) => updateLookupItem(table, name, { color }),
+    onSuccess: invalidate,
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not change color"),
+  });
+
   return (
     <Card>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -244,6 +250,15 @@ function LookupsCard({ snap }: { snap: Snapshot }) {
           const active = "active" in item ? item.active : true;
           return (
             <li key={item.name} className="flex items-center gap-2.5 py-2">
+              {"color" in item ? (
+                <input
+                  type="color"
+                  value={/^#[0-9a-fA-F]{6}$/.test(item.color) ? item.color : "#898781"}
+                  onChange={(e) => recolor.mutate({ name: item.name, color: e.target.value })}
+                  title="Change color"
+                  className="size-5 shrink-0 cursor-pointer rounded-full border-0 bg-transparent p-0"
+                />
+              ) : null}
               <Pill label={item.name} color={"color" in item ? item.color : undefined} className={cn(!active && "opacity-40")} />
               {table === "Priorities" && "rank" in item ? <span className="text-xs text-zinc-400">rank {item.rank} · weight {item.weight}</span> : null}
               {table === "Statuses" && "group" in item ? <span className="text-xs text-zinc-400">{item.group}</span> : null}
@@ -298,8 +313,8 @@ function AddLookupForm({ table, onAdded }: { table: LookupTableName; onAdded: ()
       <Field label="Name" className="min-w-40 flex-1">
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={`New ${table.toLowerCase()}…`} />
       </Field>
-      <Field label="Color" className="w-28">
-        <Input value={color} onChange={(e) => setColor(e.target.value)} placeholder="#2a78d6" />
+      <Field label="Color" className="w-44">
+        <ColorField value={color} onChange={setColor} />
       </Field>
       {table === "Priorities" ? (
         <>
