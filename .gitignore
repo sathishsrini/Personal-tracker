@@ -6,6 +6,5 @@ out
 *.tsbuildinfo
 next-env.d.ts
 /data/
-credentials/*.json
 dev.log
 run*.log
