@@ -1,7 +1,9 @@
 import type {
   CarrySuggestion,
   DailyPlanItem,
+  Milestone,
   PlanItemLike,
+  Project,
   Settings,
   Snapshot,
   Subtask,
@@ -134,6 +136,8 @@ export interface NewTaskInput {
   title: string;
   description?: string;
   category?: string;
+  projectId?: string;
+  milestoneId?: string;
   type?: string;
   priority?: string;
   status?: string;
@@ -176,6 +180,58 @@ export interface ReorderUpdateInput {
 
 export function reorderTasks(updates: ReorderUpdateInput[]): Promise<{ ok: boolean }> {
   return req("/api/tasks/reorder", "POST", { updates });
+}
+
+// ---------------------------------------------------------------------------
+// projects + milestones
+// ---------------------------------------------------------------------------
+
+export interface NewProjectInput {
+  name: string;
+  description?: string;
+  color?: string;
+  status?: string;
+  startDate?: string | null;
+  targetDate?: string | null;
+}
+
+export function createProject(input: NewProjectInput): Promise<Project> {
+  return req<Project>("/api/projects", "POST", input);
+}
+
+export function updateProject(id: string, patch: Partial<NewProjectInput> & { order?: number }): Promise<Project> {
+  return req<Project>(`/api/projects/${id}`, "PATCH", patch);
+}
+
+export function archiveProject(id: string): Promise<{ archived: boolean }> {
+  return req(`/api/projects/${id}`, "DELETE", { mode: "archive" });
+}
+
+export function restoreProject(id: string): Promise<{ archived: boolean }> {
+  return req(`/api/projects/${id}`, "DELETE", { restore: true });
+}
+
+export function deleteProjectPermanently(id: string): Promise<{ archived: boolean; permanent: boolean }> {
+  return req(`/api/projects/${id}`, "DELETE", { mode: "permanent" });
+}
+
+export interface NewMilestoneInput {
+  title: string;
+  description?: string;
+  status?: string;
+  dueDate?: string | null;
+}
+
+export function createMilestone(projectId: string, input: NewMilestoneInput): Promise<Milestone> {
+  return req<Milestone>(`/api/projects/${projectId}/milestones`, "POST", input);
+}
+
+export function updateMilestone(id: string, patch: Partial<NewMilestoneInput> & { order?: number }): Promise<Milestone> {
+  return req<Milestone>(`/api/milestones/${id}`, "PATCH", patch);
+}
+
+export function deleteMilestone(id: string): Promise<{ deleted: boolean }> {
+  return req(`/api/milestones/${id}`, "DELETE", {});
 }
 
 // ---------------------------------------------------------------------------

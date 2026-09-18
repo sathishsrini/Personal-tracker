@@ -2,6 +2,7 @@ import {
   BarChart3,
   CalendarClock,
   CalendarDays,
+  FolderKanban,
   Grid2x2,
   LayoutDashboard,
   ListTodo,
@@ -20,6 +21,7 @@ export interface NavItem {
 export const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "Plan" },
   { href: "/tasks", label: "Task List", icon: ListTodo, section: "Plan" },
+  { href: "/projects", label: "Projects", icon: FolderKanban, section: "Plan" },
   { href: "/quadrant", label: "Quadrant", icon: Grid2x2, section: "Plan" },
   { href: "/planner/daily", label: "Daily Planner", icon: CalendarDays, section: "Plan" },
   { href: "/planner/weekly", label: "Weekly Planner", icon: CalendarClock, section: "Plan" },
@@ -32,6 +34,7 @@ export const NAV: NavItem[] = [
 export const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/tasks": "Task List",
+  "/projects": "Projects",
   "/quadrant": "Effort vs Impact",
   "/planner/daily": "Daily Planner",
   "/planner/weekly": "Weekly Planner",
@@ -42,5 +45,6 @@ export const PAGE_TITLES: Record<string, string> = {
 
 export function titleFor(pathname: string): string {
   if (pathname.startsWith("/tasks/")) return "Task Detail";
+  if (pathname.startsWith("/projects/")) return "Project Detail";
   return PAGE_TITLES[pathname] ?? "My Tracker";
 }

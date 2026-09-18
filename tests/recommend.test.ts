@@ -8,6 +8,8 @@ function task(overrides: Partial<Task>): Task {
     title: "Task",
     description: "",
     category: "",
+    projectId: "",
+    milestoneId: "",
     type: "",
     priority: "Medium",
     status: "Yet to Start",

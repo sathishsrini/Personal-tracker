@@ -1,6 +1,17 @@
 export { addNote, archiveTask, createSubtask, createTask, deleteSubtask, deleteTaskPermanently, reorderTasks, restoreTask, updateSubtask, updateTask } from "./tasks";
 export { addLookupItem, updateLookupItem, deactivateLookupItem, reactivateLookupItem } from "./lookups";
 export type { LookupTable } from "./lookups";
+export {
+  archiveProject,
+  createMilestone,
+  createProject,
+  deleteMilestone,
+  deleteProjectPermanently,
+  restoreProject,
+  updateMilestone,
+  updateProject,
+} from "./projects";
+export type { CreateProjectInput, UpdateProjectInput, CreateMilestoneInput, UpdateMilestoneInput } from "./projects";
 export { timerAction, stopTimer, enforceConsistentEntries } from "./timer";
 export { createManualEntry, updateManualEntry, deleteEntry, findOverlap } from "./entries";
 export { carryForwardSuggestions, computeCarrySuggestions, readDailyPlan, readWeeklyPlan, replaceDailyPlan, replaceWeeklyPlan } from "./plans";

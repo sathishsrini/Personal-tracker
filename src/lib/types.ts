@@ -1,4 +1,6 @@
 export type TableName =
+  | "Projects"
+  | "Milestones"
   | "Tasks"
   | "Subtasks"
   | "DailyPlan"
@@ -21,11 +23,43 @@ export type StatusGroup = "todo" | "active" | "waiting" | "done" | "cancelled";
 /** Why a time-entry segment ended. Empty while the segment is still running. */
 export type EndReason = "" | "pause" | "stop" | "switch" | "auto";
 
+/** A body of work that groups tasks and milestones. Status/colour reuse the shared Statuses lookup. */
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  status: string;
+  startDate: string | null;
+  targetDate: string | null;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string;
+  archived: boolean;
+}
+
+/** A dated checkpoint inside a project; tasks can be pinned to one. */
+export interface Milestone {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string;
+  status: string;
+  dueDate: string | null;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string;
+}
+
 export interface Task {
   id: string;
   title: string;
   description: string;
   category: string;
+  projectId: string;
+  milestoneId: string;
   type: string;
   priority: string;
   status: string;
@@ -217,6 +251,8 @@ export interface Snapshot {
   serverNow: number;
   storage: StorageInfo;
   settings: Settings;
+  projects: Project[];
+  milestones: Milestone[];
   tasks: Task[];
   subtasks: Subtask[];
   entries: TimeEntry[];

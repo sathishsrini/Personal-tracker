@@ -28,6 +28,42 @@ export interface TableSpec {
 
 const col = (header: string, key: string, aliases?: string[]): ColumnSpec => ({ header, key, aliases });
 
+export const PROJECTS_TABLE: TableSpec = {
+  sheetTitle: "Projects",
+  idKey: "id",
+  columns: [
+    col("Project ID", "id"),
+    col("Project", "name", ["name", "project name", "title"]),
+    col("Description", "description", ["desc"]),
+    col("Color", "color", ["colour"]),
+    col("Status", "status"),
+    col("Start Date", "startDate", ["start", "kickoff"]),
+    col("Target Date", "targetDate", ["target", "deadline", "end date"]),
+    col("Order", "order", ["sort order"]),
+    col("Created At", "createdAt", ["created"]),
+    col("Updated At", "updatedAt"),
+    col("Completed At", "completedAt"),
+    col("Archived", "archived"),
+  ],
+};
+
+export const MILESTONES_TABLE: TableSpec = {
+  sheetTitle: "Milestones",
+  idKey: "id",
+  columns: [
+    col("Milestone ID", "id"),
+    col("Project ID", "projectId"),
+    col("Milestone", "title", ["title", "name", "milestone name"]),
+    col("Description", "description", ["desc"]),
+    col("Status", "status"),
+    col("Due Date", "dueDate", ["due", "target date"]),
+    col("Order", "order", ["sort order"]),
+    col("Created At", "createdAt", ["created"]),
+    col("Updated At", "updatedAt"),
+    col("Completed At", "completedAt"),
+  ],
+};
+
 export const TASKS_TABLE: TableSpec = {
   sheetTitle: "Tasks",
   idKey: "id",
@@ -36,6 +72,8 @@ export const TASKS_TABLE: TableSpec = {
     col("Task", "title", ["title", "task", "point", "task name", "name", "task/point", "task / point"]),
     col("Description", "description", ["desc"]),
     col("Category", "category", ["project", "category/project"]),
+    col("Project ID", "projectId"),
+    col("Milestone ID", "milestoneId"),
     col("Type", "type", ["weekly or daily", "task type", "weekly/daily"]),
     col("Priority", "priority"),
     col("Status", "status"),
@@ -207,6 +245,8 @@ export const REPORTS_TABLE: TableSpec = {
 };
 
 export const ALL_TABLES: Record<TableName, TableSpec> = {
+  Projects: PROJECTS_TABLE,
+  Milestones: MILESTONES_TABLE,
   Tasks: TASKS_TABLE,
   Subtasks: SUBTASKS_TABLE,
   DailyPlan: DAILY_PLAN_TABLE,

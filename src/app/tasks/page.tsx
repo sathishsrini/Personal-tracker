@@ -11,7 +11,7 @@ import { formatHM } from "@/lib/time";
 import { summarizeTaskTime } from "@/lib/domain/timer";
 import { classifyQuadrant, QUADRANTS } from "@/lib/domain/quadrant";
 import { todayKey } from "@/lib/derive";
-import { PageShell, Button, Input, Select, Field, Card, Empty, cn } from "@/components/ui";
+import { PageShell, Button, Input, Select, Field, Card, Empty, Pill, cn } from "@/components/ui";
 import { QueryState } from "@/components/page-states";
 import { CategoryPill, EffortImpactTag, PriorityPill, StatusSelect, SubtaskBadge } from "@/components/task-fragments";
 import { TimerControl } from "@/components/timer-control";
@@ -26,7 +26,7 @@ export default function TasksPage() {
   const [search, setSearch] = useState("");
   const [group, setGroup] = useState("all");
   const [view, setView] = useState<"list" | "board">("list");
-  const [form, setForm] = useState({ title: "", description: "", category: "", priority: "Medium", type: "", effort: "", impact: "", estimate: "", due: "" });
+  const [form, setForm] = useState({ title: "", description: "", category: "", projectId: "", priority: "Medium", type: "", effort: "", impact: "", estimate: "", due: "" });
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const qc = useQueryClient();
 
@@ -44,6 +44,7 @@ export default function TasksPage() {
         title: form.title,
         description: form.description || undefined,
         category: form.category || undefined,
+        projectId: form.projectId || undefined,
         priority: form.priority || undefined,
         type: form.type || undefined,
         effort: form.effort === "" ? null : Number(form.effort),
@@ -53,7 +54,7 @@ export default function TasksPage() {
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["snapshot"] });
-      setForm({ title: "", description: "", category: "", priority: "Medium", type: "", effort: "", impact: "", estimate: "", due: "" });
+      setForm({ title: "", description: "", category: "", projectId: "", priority: "Medium", type: "", effort: "", impact: "", estimate: "", due: "" });
       setShowForm(false);
       toast.success("Task created — you can type the rest in the detail view or straight into the sheet.");
     },
@@ -154,6 +155,18 @@ export default function TasksPage() {
                   ))}
                 </Select>
               </Field>
+              <Field label="Project">
+                <Select value={form.projectId} onChange={(e) => setForm({ ...form, projectId: e.target.value })}>
+                  <option value="">No project</option>
+                  {(snap.data?.projects ?? [])
+                    .filter((p) => !p.archived)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </Select>
+              </Field>
               <Field label="Priority">
                 <Select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
                   {snap.data?.priorities.map((p) => (
@@ -219,6 +232,7 @@ export default function TasksPage() {
                 const total = summarizeTaskTime(snap.data?.entries.filter((e) => e.taskId === t.id) ?? [], t.id, Date.now()).totalSeconds;
                 const done = ["Completed", "Closed"].includes(t.status);
                 const taskSubtasks = (snap.data?.subtasks ?? []).filter((s) => s.taskId === t.id);
+                const project = (snap.data?.projects ?? []).find((p) => p.id === t.projectId);
                 const isOpen = expanded.has(t.id);
                 return (
                   <Fragment key={t.id}>
@@ -245,6 +259,7 @@ export default function TasksPage() {
                         </Link>
                         <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                           <PriorityPill snap={snap.data} priority={t.priority} />
+                          {project ? <Pill label={project.name} color={project.color} /> : null}
                           <CategoryPill category={t.category} />
                           <EffortImpactTag effort={t.effort} impact={t.impact} />
                           <span className="size-2 rounded-full bg-zinc-200" style={quadDotStyle(t.effort, t.impact, snap.data?.settings.quadrantThreshold)} />
