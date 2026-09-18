@@ -399,6 +399,12 @@ function SubtasksCard({
           e.preventDefault();
           if (title.trim()) add.mutate();
         }}
+        onKeyDown={(e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.requestSubmit();
+          }
+        }}
       >
         <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Add a subtask…" />
         <Button type="submit" size="icon" variant="secondary" disabled={!title.trim()} loading={add.isPending}>
