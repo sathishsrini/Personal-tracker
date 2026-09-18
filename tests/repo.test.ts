@@ -142,4 +142,44 @@ describe("repo integration (local driver)", () => {
       expect.objectContaining({ sourceDate: "2026-09-14", taskId: task.id, plannedMinutes: 60, targetDate: "2026-09-15" }),
     ]);
   });
+
+  it("links tasks to a project and milestone, and surfaces both in the snapshot", async () => {
+    store.__trackerStorage = undefined;
+    const { createProject, createMilestone, createTask, buildSnapshot } = await import("../src/lib/repo");
+    const project = await createProject({ name: "Tracker v2", targetDate: "2026-12-01" });
+    const milestone = await createMilestone({ projectId: project.id, title: "Beta" });
+    const task = await createTask({ title: "Wire it up", projectId: project.id, milestoneId: milestone.id });
+
+    const snap = await buildSnapshot();
+    expect(snap.projects.find((p) => p.id === project.id)?.name).toBe("Tracker v2");
+    expect(snap.milestones.find((m) => m.id === milestone.id)?.projectId).toBe(project.id);
+    const linked = snap.tasks.find((t) => t.id === task.id);
+    expect(linked?.projectId).toBe(project.id);
+    expect(linked?.milestoneId).toBe(milestone.id);
+  });
+
+  it("deleting a project removes its milestones but keeps the tasks, unlinked", async () => {
+    store.__trackerStorage = undefined;
+    const { createProject, createMilestone, createTask, deleteProjectPermanently, buildSnapshot } = await import("../src/lib/repo");
+    const project = await createProject({ name: "Doomed" });
+    const milestone = await createMilestone({ projectId: project.id, title: "Never" });
+    const task = await createTask({ title: "Survivor", projectId: project.id, milestoneId: milestone.id });
+
+    await deleteProjectPermanently(project.id);
+
+    const snap = await buildSnapshot();
+    expect(snap.projects.find((p) => p.id === project.id)).toBeUndefined();
+    expect(snap.milestones.find((m) => m.id === milestone.id)).toBeUndefined();
+    const kept = snap.tasks.find((t) => t.id === task.id);
+    expect(kept?.title).toBe("Survivor");
+    expect(kept?.projectId).toBe("");
+    expect(kept?.milestoneId).toBe("");
+  });
+
+  it("rejects a milestone that points at no project", async () => {
+    store.__trackerStorage = undefined;
+    const { createMilestone } = await import("../src/lib/repo");
+    await expect(createMilestone({ projectId: "nope", title: "Orphan" })).rejects.toThrow(/not found/i);
+    await expect(createMilestone({ projectId: "", title: "Orphan" })).rejects.toThrow(/must belong to a project/i);
+  });
 });

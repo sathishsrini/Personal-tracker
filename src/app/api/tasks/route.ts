@@ -9,6 +9,8 @@ export async function POST(req: Request): Promise<Response> {
       title: str(b, "title") ?? "",
       description: str(b, "description"),
       category: str(b, "category"),
+      projectId: str(b, "projectId"),
+      milestoneId: str(b, "milestoneId"),
       type: str(b, "type"),
       priority: str(b, "priority"),
       status: str(b, "status"),

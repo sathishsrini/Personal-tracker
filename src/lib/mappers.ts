@@ -5,7 +5,9 @@ import type {
   HistoryItem,
   HistoryType,
   LookupItem,
+  Milestone,
   PriorityDef,
+  Project,
   Row,
   StatusDef,
   Subtask,
@@ -37,6 +39,8 @@ export function rowToTask(row: Row): Task {
     title: row.title ?? "",
     description: row.description ?? "",
     category: row.category ?? "",
+    projectId: row.projectId ?? "",
+    milestoneId: row.milestoneId ?? "",
     type: row.type ?? "",
     priority: row.priority ?? "",
     status: row.status ?? "",
@@ -60,6 +64,8 @@ export function taskToRow(task: Partial<Task>): Row {
   if (task.title !== undefined) row.title = task.title;
   if (task.description !== undefined) row.description = task.description;
   if (task.category !== undefined) row.category = task.category;
+  if (task.projectId !== undefined) row.projectId = task.projectId;
+  if (task.milestoneId !== undefined) row.milestoneId = task.milestoneId;
   if (task.type !== undefined) row.type = task.type;
   if (task.priority !== undefined) row.priority = task.priority;
   if (task.status !== undefined) row.status = task.status;
@@ -108,6 +114,74 @@ export function subtaskToRow(s: Partial<Subtask>): Row {
   if (s.createdAt !== undefined) row.createdAt = s.createdAt;
   if (s.updatedAt !== undefined) row.updatedAt = s.updatedAt;
   if (s.completedAt !== undefined) row.completedAt = s.completedAt;
+  return row;
+}
+
+// ---------------------------------------------------------------------------
+// Projects + milestones
+// ---------------------------------------------------------------------------
+
+export function rowToProject(row: Row): Project {
+  return {
+    id: row.id ?? "",
+    name: row.name ?? "",
+    description: row.description ?? "",
+    color: row.color ?? "",
+    status: row.status ?? "",
+    startDate: row.startDate ? parseDateKey(row.startDate) : null,
+    targetDate: row.targetDate ? parseDateKey(row.targetDate) : null,
+    order: toNumber(row.order) ?? 0,
+    createdAt: row.createdAt ?? "",
+    updatedAt: row.updatedAt ?? "",
+    completedAt: row.completedAt ?? "",
+    archived: truthy(row.archived),
+  };
+}
+
+export function projectToRow(p: Partial<Project>): Row {
+  const row: Row = {};
+  if (p.id !== undefined) row.id = p.id;
+  if (p.name !== undefined) row.name = p.name;
+  if (p.description !== undefined) row.description = p.description;
+  if (p.color !== undefined) row.color = p.color;
+  if (p.status !== undefined) row.status = p.status;
+  if (p.startDate !== undefined) row.startDate = p.startDate ?? "";
+  if (p.targetDate !== undefined) row.targetDate = p.targetDate ?? "";
+  if (p.order !== undefined) row.order = String(p.order);
+  if (p.createdAt !== undefined) row.createdAt = p.createdAt;
+  if (p.updatedAt !== undefined) row.updatedAt = p.updatedAt;
+  if (p.completedAt !== undefined) row.completedAt = p.completedAt;
+  if (p.archived !== undefined) row.archived = bool(p.archived);
+  return row;
+}
+
+export function rowToMilestone(row: Row): Milestone {
+  return {
+    id: row.id ?? "",
+    projectId: row.projectId ?? "",
+    title: row.title ?? "",
+    description: row.description ?? "",
+    status: row.status ?? "",
+    dueDate: row.dueDate ? parseDateKey(row.dueDate) : null,
+    order: toNumber(row.order) ?? 0,
+    createdAt: row.createdAt ?? "",
+    updatedAt: row.updatedAt ?? "",
+    completedAt: row.completedAt ?? "",
+  };
+}
+
+export function milestoneToRow(m: Partial<Milestone>): Row {
+  const row: Row = {};
+  if (m.id !== undefined) row.id = m.id;
+  if (m.projectId !== undefined) row.projectId = m.projectId;
+  if (m.title !== undefined) row.title = m.title;
+  if (m.description !== undefined) row.description = m.description;
+  if (m.status !== undefined) row.status = m.status;
+  if (m.dueDate !== undefined) row.dueDate = m.dueDate ?? "";
+  if (m.order !== undefined) row.order = String(m.order);
+  if (m.createdAt !== undefined) row.createdAt = m.createdAt;
+  if (m.updatedAt !== undefined) row.updatedAt = m.updatedAt;
+  if (m.completedAt !== undefined) row.completedAt = m.completedAt;
   return row;
 }
 

@@ -2,7 +2,9 @@ import {
   rowToDailyPlanItem,
   rowToHistory,
   rowToLookup,
+  rowToMilestone,
   rowToPriority,
+  rowToProject,
   rowToStatus,
   rowToSubtask,
   rowToTask,
@@ -90,6 +92,24 @@ export async function hydrateBareTasks(settings?: Settings): Promise<HydrationRe
   return { claimed: claimed.length, subtasksAdded };
 }
 
+/** Same low-friction path as `hydrateBareTasks`, for a project name typed straight into the Projects tab. */
+export async function hydrateBareProjects(): Promise<number> {
+  const storage = getStorage();
+  const now = toLocalIso(Date.now());
+  const claimed = await storage.claimBlankRows("Projects", (row) => {
+    if (!row.name?.trim()) return null;
+    return {
+      id: newId(),
+      status: row.status || "Yet to Start",
+      order: row.order || "0",
+      archived: row.archived || "false",
+      createdAt: row.createdAt || now,
+      updatedAt: now,
+    };
+  });
+  return claimed.length;
+}
+
 function buildWarnings(tasks: ReturnType<typeof rowToTask>[], entries: ReturnType<typeof rowToTimeEntry>[], storageError: string | null): string[] {
   const warnings: string[] = [];
   if (storageError) warnings.push(`Storage error: ${storageError}`);
@@ -141,10 +161,13 @@ async function buildSnapshotUncached(): Promise<Snapshot> {
   const settings = await getSettings();
   await enforceConsistentEntries(settings);
   await hydrateBareTasks(settings);
+  await hydrateBareProjects();
 
   const all = await storage.readAll();
   const tasks = all.Tasks.map(rowToTask).filter((t) => t.id);
   const taskIds = new Set(tasks.map((t) => t.id));
+  const projects = all.Projects.map(rowToProject).filter((p) => p.id);
+  const projectIds = new Set(projects.map((p) => p.id));
 
   const statuses = all.Statuses.map(rowToStatus).filter((s) => s.name);
   const priorities = all.Priorities.map(rowToPriority).filter((p) => p.name);
@@ -157,6 +180,8 @@ async function buildSnapshotUncached(): Promise<Snapshot> {
     serverNow: Date.now(),
     storage: info,
     settings,
+    projects,
+    milestones: all.Milestones.map(rowToMilestone).filter((m) => m.id && projectIds.has(m.projectId)),
     tasks,
     subtasks: all.Subtasks.map(rowToSubtask).filter((s) => s.id && taskIds.has(s.taskId)),
     entries: all.TimeEntries.map(rowToTimeEntry).filter((e) => e.id && !e.deleted),

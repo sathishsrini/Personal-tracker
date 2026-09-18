@@ -12,6 +12,8 @@ export interface CreateTaskInput {
   title: string;
   description?: string;
   category?: string;
+  projectId?: string;
+  milestoneId?: string;
   type?: string;
   priority?: string;
   status?: string;
@@ -39,6 +41,8 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
     title: input.title.trim(),
     description: input.description ?? "",
     category: input.category ?? settings.defaultCategory,
+    projectId: input.projectId ?? "",
+    milestoneId: input.milestoneId ?? "",
     type: input.type ?? settings.defaultType,
     priority: input.priority ?? "Medium",
     status: input.status ?? "Yet to Start",
@@ -64,6 +68,8 @@ export interface UpdateTaskInput {
   title?: string;
   description?: string;
   category?: string;
+  projectId?: string;
+  milestoneId?: string;
   type?: string;
   priority?: string;
   status?: string;
@@ -80,6 +86,8 @@ const FIELD_LABELS: Record<string, string> = {
   title: "Title",
   description: "Description",
   category: "Category",
+  projectId: "Project",
+  milestoneId: "Milestone",
   type: "Type",
   priority: "Priority",
   effort: "Effort",
@@ -89,6 +97,19 @@ const FIELD_LABELS: Record<string, string> = {
   notes: "Notes",
   progress: "Progress",
 };
+
+/** Id → display name for any project/milestone link that changed, so the activity log reads as names rather than raw ids. */
+async function linkLabels(changedKeys: (keyof UpdateTaskInput)[]): Promise<Map<string, string>> {
+  const labels = new Map<string, string>();
+  const storage = getStorage();
+  if (changedKeys.includes("projectId")) {
+    for (const p of await storage.readTable("Projects")) if (p.id) labels.set(p.id, p.name || "Untitled project");
+  }
+  if (changedKeys.includes("milestoneId")) {
+    for (const m of await storage.readTable("Milestones")) if (m.id) labels.set(m.id, m.title || "Untitled milestone");
+  }
+  return labels;
+}
 
 /**
  * Merges `patch` into the task and writes only the changed columns. Status
@@ -127,14 +148,19 @@ export async function updateTask(id: string, patch: UpdateTaskInput): Promise<Ta
   if (patch.status && patch.status !== before.status) {
     await logHistory({ taskId: id, type: "status", field: "status", from: before.status, to: patch.status });
   }
+  const links = await linkLabels(changedKeys);
+  const label = (value: unknown): string => {
+    const raw = String(value ?? "");
+    return links.get(raw) ?? raw;
+  };
   for (const key of changedKeys) {
     if (key === "status" || key === "order") continue; // order changes from drag-reordering aren't meaningful activity log entries
     await logHistory({
       taskId: id,
       type: "field",
       field: FIELD_LABELS[key] ?? key,
-      from: String(before[key] ?? ""),
-      to: String(patch[key] ?? ""),
+      from: label(before[key]),
+      to: label(patch[key]),
     });
   }
 

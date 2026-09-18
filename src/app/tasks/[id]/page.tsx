@@ -210,6 +210,30 @@ function TaskDetailBody({ snap, task }: { snap: Snapshot; task: Task }) {
                   <option>Weekly</option>
                 </Select>
               </Field>
+              <Field label="Project">
+                <Select value={task.projectId} onChange={(e) => patch.mutate({ projectId: e.target.value, milestoneId: "" })}>
+                  <option value="">No project</option>
+                  {snap.projects
+                    .filter((p) => !p.archived || p.id === task.projectId)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </Select>
+              </Field>
+              <Field label="Milestone" hint={task.projectId ? undefined : "Pick a project first"}>
+                <Select value={task.milestoneId} disabled={!task.projectId} onChange={(e) => patch.mutate({ milestoneId: e.target.value })}>
+                  <option value="">No milestone</option>
+                  {snap.milestones
+                    .filter((m) => m.projectId === task.projectId)
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.title}
+                      </option>
+                    ))}
+                </Select>
+              </Field>
               <Field label="Effort (1-10)" hint="How much work this takes">
                 <Input
                   type="number"
