@@ -11,7 +11,7 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "outline";
 type Size = "sm" | "md" | "icon";
 
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-zinc-900 text-white hover:bg-zinc-700 active:bg-zinc-800 shadow-sm",
+  primary: "bg-accent-600 text-white hover:bg-accent-700 active:bg-accent-700 shadow-sm",
   secondary: "bg-white text-zinc-800 border border-zinc-200 hover:bg-zinc-50 active:bg-zinc-100 shadow-sm",
   outline: "bg-transparent text-zinc-700 border border-zinc-300 hover:bg-zinc-100",
   ghost: "bg-transparent text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
@@ -25,7 +25,7 @@ const SIZES: Record<Size, string> = {
 };
 
 const BASE =
-  "inline-flex items-center justify-center rounded-lg font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/30 disabled:opacity-50 disabled:pointer-events-none select-none";
+  "inline-flex items-center justify-center rounded-lg font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent-500/40 disabled:opacity-50 disabled:pointer-events-none select-none";
 
 export function Button({
   variant = "secondary",
@@ -60,7 +60,7 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
 }
 
 const FIELD =
-  "w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 focus:ring-zinc-900/10 disabled:bg-zinc-50";
+  "w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-accent-500 focus:ring-2 focus:ring-accent-500/15 disabled:bg-zinc-50";
 
 const SWATCHES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"];
 

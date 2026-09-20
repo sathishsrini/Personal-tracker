@@ -13,7 +13,7 @@ import { cn } from "./ui";
 function Brand() {
   return (
     <Link href="/dashboard" className="flex items-center gap-2.5 px-3 py-4 md:px-5">
-      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-zinc-900 text-sm font-bold text-white">T</span>
+      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent-600 text-sm font-bold text-white">T</span>
       <span className="hidden text-sm font-semibold text-zinc-900 md:block">My Tracker</span>
     </Link>
   );
@@ -148,7 +148,7 @@ function Sidebar() {
                       title={item.label}
                       className={cn(
                         "flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm transition-colors md:px-2.5",
-                        active ? "bg-zinc-900 font-medium text-white" : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                        active ? "bg-accent-600 font-medium text-white" : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
                       )}
                     >
                       <item.icon className="size-4 shrink-0" />
