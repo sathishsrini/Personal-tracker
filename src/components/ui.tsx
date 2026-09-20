@@ -183,7 +183,7 @@ export function ProgressBar({
 }) {
   const clamped = Math.min(100, Math.max(0, Math.round(pct)));
   const height = size === "xs" ? "h-1" : size === "md" ? "h-2" : "h-1.5";
-  const fill = color ?? (clamped >= 100 ? "#10b981" : "#18181b");
+  const fill = color ?? (clamped >= 100 ? "#10b981" : "var(--color-zinc-900)");
   return (
     <div className={cn("w-full", className)}>
       <div

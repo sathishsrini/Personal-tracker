@@ -29,7 +29,7 @@ export function StatCard({
 }
 
 /** Simple horizontal bar used across dashboard + reports. */
-export function HBar({ label, value, max, color = "#18181b", suffix }: { label: string; value: number; max: number; color?: string; suffix?: string }) {
+export function HBar({ label, value, max, color = "var(--color-zinc-900)", suffix }: { label: string; value: number; max: number; color?: string; suffix?: string }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   return (
     <div className="flex items-center gap-3">

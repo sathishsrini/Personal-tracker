@@ -8,6 +8,7 @@ import { CheckCircle2, Command as CommandIcon, Database, RefreshCw, Search } fro
 import { formatDateLabel, dateKey } from "@/lib/time";
 import { useSnapshot, useSync } from "@/hooks/use-app";
 import { NAV, titleFor } from "./nav";
+import { ThemeToggle } from "./theme";
 import { cn } from "./ui";
 
 function Brand() {
@@ -79,7 +80,7 @@ function CommandPalette() {
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-900/30 p-4 pt-[15vh]" onClick={close}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-[#000]/40 p-4 pt-[15vh]" onClick={close}>
           <div
             className="w-full max-w-md overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
@@ -187,6 +188,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <h1 className="text-sm font-semibold text-zinc-800">{titleFor(pathname)}</h1>
           <div className="flex items-center gap-2">
             <span className="hidden text-xs text-zinc-400 sm:block">{formatDateLabel(dateKey(), "long")}</span>
+            <ThemeToggle />
             <SyncButton />
             <CommandPalette />
           </div>

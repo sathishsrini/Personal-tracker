@@ -1,15 +1,8 @@
 @import "tailwindcss";
 
-/*
- * Dark mode: Tailwind v4 emits every zinc / white / black utility class as
- * var(--color-zinc-100) etc, defined at :root by the "tailwindcss" import
- * above. Overriding those same variables under a dark media query flips
- * every bg-zinc, text-zinc and border-zinc class already used across the
- * app (335+ call sites) without touching a single component.
- */
 /* @theme registers these as real Tailwind tokens, so bg-accent-600 etc.
-   exist as utility classes; the media-query override below still works
-   because v4 utilities read the underlying CSS variable at render time. */
+   exist as utility classes; the .dark overrides below still work because v4
+   utilities read the underlying CSS variable at render time. */
 @theme {
   --color-accent-50: oklch(0.96 0.02 260);
   --color-accent-100: oklch(0.93 0.045 260);
@@ -22,28 +15,39 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --color-white: oklch(0.2 0.005 285);
-    --color-black: oklch(0.98 0 0);
-    --color-zinc-50: oklch(0.19 0.005 285);
-    --color-zinc-100: oklch(0.23 0.006 285);
-    --color-zinc-200: oklch(0.28 0.006 285);
-    --color-zinc-300: oklch(0.36 0.008 285);
-    --color-zinc-400: oklch(0.5 0.008 285);
-    --color-zinc-500: oklch(0.62 0.008 285);
-    --color-zinc-600: oklch(0.72 0.008 285);
-    --color-zinc-700: oklch(0.82 0.006 285);
-    --color-zinc-800: oklch(0.9 0.004 285);
-    --color-zinc-900: oklch(0.96 0.002 285);
-    --color-zinc-950: oklch(0.99 0 0);
-    --color-accent-50: oklch(0.25 0.05 260);
-    --color-accent-100: oklch(0.3 0.07 260);
-    --color-accent-500: oklch(0.7 0.16 260);
-    --color-accent-600: oklch(0.75 0.15 260);
-    --color-accent-700: oklch(0.82 0.13 260);
-  }
+/* Theme is driven by a .dark class on <html> (set by the theme provider, which
+   also follows the OS preference in "system" mode). Tailwind v4 emits every
+   zinc / white / black utility as var(--color-zinc-100) etc., so overriding
+   those variables under .dark flips every bg-zinc, text-zinc and border-zinc
+   class already used across the app without touching a single component. The
+   status colors are brightened the same way so red / amber / emerald text keeps
+   contrast on dark surfaces. */
+.dark {
+  color-scheme: dark;
+  --color-white: oklch(0.2 0.005 285);
+  --color-black: oklch(0.98 0 0);
+  --color-zinc-50: oklch(0.19 0.005 285);
+  --color-zinc-100: oklch(0.23 0.006 285);
+  --color-zinc-200: oklch(0.28 0.006 285);
+  --color-zinc-300: oklch(0.36 0.008 285);
+  --color-zinc-400: oklch(0.5 0.008 285);
+  --color-zinc-500: oklch(0.62 0.008 285);
+  --color-zinc-600: oklch(0.72 0.008 285);
+  --color-zinc-700: oklch(0.82 0.006 285);
+  --color-zinc-800: oklch(0.9 0.004 285);
+  --color-zinc-900: oklch(0.96 0.002 285);
+  --color-zinc-950: oklch(0.99 0 0);
+  --color-accent-50: oklch(0.25 0.05 260);
+  --color-accent-100: oklch(0.3 0.07 260);
+  --color-accent-500: oklch(0.7 0.16 260);
+  --color-accent-600: oklch(0.75 0.15 260);
+  --color-accent-700: oklch(0.82 0.13 260);
+  --color-emerald-500: oklch(0.72 0.17 164);
+  --color-emerald-600: oklch(0.66 0.18 164);
+  --color-amber-500: oklch(0.75 0.16 75);
+  --color-amber-600: oklch(0.7 0.15 75);
+  --color-red-500: oklch(0.66 0.2 25);
+  --color-red-600: oklch(0.61 0.21 25);
 }
 
 html,
@@ -57,6 +61,12 @@ body {
   -webkit-font-smoothing: antialiased;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Slimmer, theme-aware scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-zinc-300) transparent;
 }
 
 /* cmdk list scroller */
