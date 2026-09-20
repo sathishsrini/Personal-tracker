@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 /*
- * Dark mode: Tailwind v4 emits every zinc-*/white/black utility as
- * `var(--color-zinc-100)` etc, defined at :root by the "tailwindcss" import
+ * Dark mode: Tailwind v4 emits every zinc / white / black utility class as
+ * var(--color-zinc-100) etc, defined at :root by the "tailwindcss" import
  * above. Overriding those same variables under a dark media query flips
- * every bg-zinc-*/text-zinc-*/border-zinc-* class already used across the
+ * every bg-zinc, text-zinc and border-zinc class already used across the
  * app (335+ call sites) without touching a single component.
  */
 /* @theme registers these as real Tailwind tokens, so bg-accent-600 etc.
