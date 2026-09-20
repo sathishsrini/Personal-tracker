@@ -159,3 +159,49 @@ export function PageShell({ title, subtitle, actions, children }: { title: strin
     </div>
   );
 }
+/**
+ * A progress bar. `pct` is 0-100 and is clamped, because callers derive it from
+ * user-entered numbers that can be out of range.
+ *
+ * `tone` follows the value rather than being passed in: a finished bar reads
+ * green at a glance, which is the whole point of showing one in a list.
+ */
+export function ProgressBar({
+  pct,
+  size = "sm",
+  showLabel = false,
+  label,
+  color,
+  className,
+}: {
+  pct: number;
+  size?: "xs" | "sm" | "md";
+  showLabel?: boolean;
+  label?: string;
+  color?: string;
+  className?: string;
+}) {
+  const clamped = Math.min(100, Math.max(0, Math.round(pct)));
+  const height = size === "xs" ? "h-1" : size === "md" ? "h-2" : "h-1.5";
+  const fill = color ?? (clamped >= 100 ? "#10b981" : "#18181b");
+  return (
+    <div className={cn("w-full", className)}>
+      <div
+        className={cn("w-full overflow-hidden rounded-full bg-zinc-100", height)}
+        role="progressbar"
+        aria-valuenow={clamped}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={label ?? "Progress"}
+      >
+        <div className="h-full rounded-full transition-all duration-300" style={{ width: `${clamped}%`, backgroundColor: fill }} />
+      </div>
+      {showLabel ? (
+        <p className="mt-1 flex justify-between text-xs tabular-nums text-zinc-400">
+          {label ? <span>{label}</span> : <span />}
+          <span>{clamped}%</span>
+        </p>
+      ) : null}
+    </div>
+  );
+}

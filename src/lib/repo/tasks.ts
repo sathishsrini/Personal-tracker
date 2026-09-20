@@ -2,7 +2,7 @@ import { rowToSubtask, rowToTask, subtaskToRow, taskToRow } from "../mappers";
 import { getStorage } from "../storage";
 import { toLocalIso } from "../time";
 import type { Subtask, Task } from "../types";
-import { logHistory } from "./history";
+import { logHistory, logHistoryBatch } from "./history";
 import { newId } from "./ids";
 import { stopTimer } from "./timer";
 
@@ -153,16 +153,19 @@ export async function updateTask(id: string, patch: UpdateTaskInput): Promise<Ta
     const raw = String(value ?? "");
     return links.get(raw) ?? raw;
   };
-  for (const key of changedKeys) {
-    if (key === "status" || key === "order") continue; // order changes from drag-reordering aren't meaningful activity log entries
-    await logHistory({
-      taskId: id,
-      type: "field",
-      field: FIELD_LABELS[key] ?? key,
-      from: label(before[key]),
-      to: label(patch[key]),
-    });
-  }
+  // One append for the whole edit rather than one per field — see logHistoryBatch.
+  await logHistoryBatch(
+    changedKeys
+      // order changes from drag-reordering aren't meaningful activity log entries
+      .filter((key) => key !== "status" && key !== "order")
+      .map((key) => ({
+        taskId: id,
+        type: "field" as const,
+        field: FIELD_LABELS[key] ?? key,
+        from: label(before[key]),
+        to: label(patch[key]),
+      }))
+  );
 
   return next;
 }
@@ -240,6 +243,7 @@ export async function addNote(input: AddNoteInput): Promise<void> {
 export interface CreateSubtaskInput {
   taskId: string;
   title: string;
+  weight?: number | null;
   estimateMinutes?: number | null;
   order?: number;
 }
@@ -256,6 +260,7 @@ export async function createSubtask(input: CreateSubtaskInput): Promise<Subtask>
     taskId: input.taskId,
     title: input.title.trim(),
     status: "Yet to Start",
+    weight: input.weight ?? null,
     estimateMinutes: input.estimateMinutes ?? null,
     order,
     notes: "",
@@ -271,6 +276,7 @@ export async function createSubtask(input: CreateSubtaskInput): Promise<Subtask>
 export interface UpdateSubtaskInput {
   title?: string;
   status?: string;
+  weight?: number | null;
   estimateMinutes?: number | null;
   order?: number;
   notes?: string;

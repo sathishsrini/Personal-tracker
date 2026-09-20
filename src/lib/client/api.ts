@@ -238,11 +238,11 @@ export function deleteMilestone(id: string): Promise<{ deleted: boolean }> {
 // subtasks + notes
 // ---------------------------------------------------------------------------
 
-export function createSubtask(taskId: string, input: { title: string; estimateMinutes?: number | null }): Promise<Subtask> {
+export function createSubtask(taskId: string, input: { title: string; weight?: number | null; estimateMinutes?: number | null }): Promise<Subtask> {
   return req<Subtask>(`/api/tasks/${taskId}/subtasks`, "POST", input);
 }
 
-export function updateSubtask(id: string, patch: { title?: string; status?: string; estimateMinutes?: number | null }): Promise<Subtask> {
+export function updateSubtask(id: string, patch: { title?: string; status?: string; weight?: number | null; estimateMinutes?: number | null }): Promise<Subtask> {
   return req<Subtask>(`/api/subtasks/${id}`, "PATCH", patch);
 }
 

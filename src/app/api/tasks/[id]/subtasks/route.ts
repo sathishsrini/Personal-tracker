@@ -7,6 +7,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const b = await readJson(req);
     const title = str(b, "title");
     if (!title) throw new Error("Subtask title is required");
-    return createSubtask({ taskId: id, title, estimateMinutes: num(b, "estimateMinutes") ?? null, order: num(b, "order") });
+    return createSubtask({ taskId: id, title, weight: num(b, "weight") ?? null, estimateMinutes: num(b, "estimateMinutes") ?? null, order: num(b, "order") });
   }, 201);
 }

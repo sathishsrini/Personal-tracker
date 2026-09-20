@@ -84,6 +84,8 @@ export interface Subtask {
   taskId: string;
   title: string;
   status: string;
+  /** How much of the task this subtask represents. null means "not rated" and counts as 1. */
+  weight: number | null;
   estimateMinutes: number | null;
   order: number;
   notes: string;

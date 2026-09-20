@@ -8,6 +8,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     return updateSubtask(id, {
       title: str(b, "title"),
       status: str(b, "status"),
+      weight: num(b, "weight"),
       estimateMinutes: num(b, "estimateMinutes"),
       order: num(b, "order"),
       notes: str(b, "notes"),

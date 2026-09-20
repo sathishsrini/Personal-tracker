@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -18,6 +20,7 @@ import {
   tagTotals,
   todayKey,
   utilPct,
+  doneStatusNames,
 } from "@/lib/derive";
 import { formatClock, formatHM, formatHMS } from "@/lib/time";
 import { summarizeTaskTime } from "@/lib/domain/timer";
@@ -25,7 +28,7 @@ import type { Snapshot } from "@/lib/types";
 import { PageShell, Card, SectionHeading, Button, Empty, cn } from "@/components/ui";
 import { QueryState } from "@/components/page-states";
 import { StatCard, HBar } from "@/components/charts";
-import { PriorityPill, StatusSelect } from "@/components/task-fragments";
+import { PriorityPill, StatusSelect, TaskProgress } from "@/components/task-fragments";
 import { TimerControl } from "@/components/timer-control";
 
 export default function DashboardPage() {
@@ -64,6 +67,7 @@ export default function DashboardPage() {
 }
 
 function DashboardBody({ snap, now, today }: { snap: Snapshot; now: number; today: string }) {
+  const doneNames = useMemo(() => doneStatusNames(snap), [snap]);
   const plan = planForDate(snap, today);
   const summary = dayPlanSummary(snap, today);
   const actualSeconds = secondsInDay(snap.entries, today, now);
@@ -187,6 +191,7 @@ function DashboardBody({ snap, now, today }: { snap: Snapshot; now: number; toda
                     {t.title}
                   </Link>
                   <span className="text-xs tabular-nums text-zinc-500">{fmtMin(item.plannedMinutes)}</span>
+                  <TaskProgress task={t} subtasks={snap.subtasks.filter((s) => s.taskId === t.id)} snap={snap} doneNames={doneNames} />
                   <StatusSelect taskId={t.id} status={t.status} snap={snap} />
                   <TimerControl
                     taskId={t.id}

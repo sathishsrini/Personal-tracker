@@ -3,7 +3,7 @@ import { entrySeconds } from "./domain/timer";
 import { classifyQuadrant, QUADRANTS, type QuadrantId } from "./domain/quadrant";
 import { scoreTask, DEFAULT_WEIGHTS } from "./domain/recommend";
 import { addDays, dayRange, formatHM, startOfWeekKey, weekKeys } from "./time";
-import type { Snapshot, Task, TimeEntry } from "./types";
+import type { Snapshot, Subtask, Task, TimeEntry } from "./types";
 
 export type ReportRange = "today" | "week" | "all";
 
@@ -84,6 +84,67 @@ export function isActionable(t: Task, snap: Snapshot): boolean {
 export function isDone(t: Task, snap: Snapshot): boolean {
   const status = snap.statuses.find((s) => s.name === t.status);
   return DONE_GROUPS.has(status?.group ?? "");
+}
+
+/** Status names that count as finished, hoisted once by callers that render a list. */
+export function doneStatusNames(snap: Snapshot): Set<string> {
+  return new Set(snap.statuses.filter((s) => DONE_GROUPS.has(s.group)).map((s) => s.name));
+}
+
+export interface TaskProgress {
+  /** 0-100, rounded. */
+  pct: number;
+  /** Plain subtask counts, for the "3/5" label — unweighted on purpose, because that is what the label claims. */
+  done: number;
+  total: number;
+  /** Where the number came from, so the UI can label a hand-entered value honestly. */
+  source: "subtasks" | "field" | "status";
+}
+
+/** The weighted roll-up on its own, for callers that have subtasks but no Task in hand. */
+export function subtaskProgress(subtasks: Subtask[], doneNames: Set<string>): TaskProgress {
+  let weightDone = 0;
+  let weightTotal = 0;
+  let countDone = 0;
+  for (const s of subtasks) {
+    const w = s.weight === null || !Number.isFinite(s.weight) || s.weight < 0 ? 1 : s.weight;
+    weightTotal += w;
+    if (doneNames.has(s.status)) {
+      weightDone += w;
+      countDone += 1;
+    }
+  }
+  // Every subtask weighted 0 would divide by zero; fall back to the plain count.
+  const pct = weightTotal > 0 ? (weightDone / weightTotal) * 100 : subtasks.length > 0 ? (countDone / subtasks.length) * 100 : 0;
+  return { pct: Math.round(pct), done: countDone, total: subtasks.length, source: "subtasks" };
+}
+
+/**
+ * How far along a task is.
+ *
+ * Subtasks are the primary signal because they are the thing the user actually
+ * ticks off. Each carries an optional `weight` — a subtask rated 3 moves the
+ * bar three times as far as one rated 1 — so "wrote the migration" does not
+ * count the same as "renamed a variable". An unrated subtask weighs 1, which
+ * makes this identical to a plain count until someone starts rating them.
+ *
+ * With no subtasks it falls back to the `Progress %` column (which the sheet
+ * has always had and nothing ever displayed), and finally to the status: done
+ * is 100, anything else is 0.
+ *
+ * `doneNames` is passed in rather than derived so a list of tasks maps the
+ * status table once instead of once per row.
+ */
+export function taskProgress(task: Task, subtasks: Subtask[], snap: Snapshot, doneNames?: Set<string>): TaskProgress {
+  const done = doneNames ?? doneStatusNames(snap);
+
+  if (subtasks.length > 0) return subtaskProgress(subtasks, done);
+
+  if (task.progress !== null && Number.isFinite(task.progress)) {
+    return { pct: Math.min(100, Math.max(0, Math.round(task.progress))), done: 0, total: 0, source: "field" };
+  }
+
+  return { pct: done.has(task.status) ? 100 : 0, done: 0, total: 0, source: "status" };
 }
 
 /** "What should I work on now?" — top-scoring actionable tasks. */

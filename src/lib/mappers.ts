@@ -93,6 +93,7 @@ export function rowToSubtask(row: Row): Subtask {
     taskId: row.taskId ?? "",
     title: row.title ?? "",
     status: row.status ?? "",
+    weight: toNumber(row.weight),
     estimateMinutes: row.estimateMinutes ? parseDuration(row.estimateMinutes) : null,
     order: toNumber(row.order) ?? 0,
     notes: row.notes ?? "",
@@ -108,6 +109,7 @@ export function subtaskToRow(s: Partial<Subtask>): Row {
   if (s.taskId !== undefined) row.taskId = s.taskId;
   if (s.title !== undefined) row.title = s.title;
   if (s.status !== undefined) row.status = s.status;
+  if (s.weight !== undefined) row.weight = s.weight === null ? "" : String(s.weight);
   if (s.estimateMinutes !== undefined) row.estimateMinutes = s.estimateMinutes === null ? "" : String(s.estimateMinutes);
   if (s.order !== undefined) row.order = String(s.order);
   if (s.notes !== undefined) row.notes = s.notes;

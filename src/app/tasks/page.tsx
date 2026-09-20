@@ -10,10 +10,11 @@ import { createTask, setTaskStatus, updateSubtask } from "@/lib/client/api";
 import { formatHM } from "@/lib/time";
 import { summarizeTaskTime } from "@/lib/domain/timer";
 import { classifyQuadrant, QUADRANTS } from "@/lib/domain/quadrant";
-import { todayKey } from "@/lib/derive";
+import { todayKey, doneStatusNames } from "@/lib/derive";
+import type { Snapshot } from "@/lib/types";
 import { PageShell, Button, Input, Select, Field, Card, Empty, Pill, cn } from "@/components/ui";
 import { QueryState } from "@/components/page-states";
-import { CategoryPill, EffortImpactTag, PriorityPill, StatusSelect, SubtaskBadge } from "@/components/task-fragments";
+import { CategoryPill, EffortImpactTag, PriorityPill, StatusSelect, TaskProgress } from "@/components/task-fragments";
 import { TimerControl } from "@/components/timer-control";
 import { PriorityBoard } from "@/components/priority-board";
 
@@ -64,7 +65,39 @@ export default function TasksPage() {
   const categories = snap.data?.categories.map((c) => c.name) ?? [];
   const tasks = snap.data?.tasks ?? [];
   const doneStatusName = snap.data?.statuses.find((s) => s.group === "done")?.name;
+  // Hoisted once for the whole list rather than rebuilt per row.
+  const doneNames = useMemo(() => (snap.data ? doneStatusNames(snap.data) : new Set<string>()), [snap.data]);
   const todoStatusName = snap.data?.statuses.find((s) => s.group === "todo")?.name;
+
+  /**
+   * Ticking the done box used to call invalidateQueries *before* sending the
+   * PATCH, so the refetch raced ahead of the write and came back with the old
+   * value — the box then sat unchanged until the next 15s poll. It now patches
+   * the cached snapshot up front, so the tick is instant, and only invalidates
+   * once the server has actually answered.
+   */
+  const toggleStatus = useMutation({
+    mutationFn: ({ id, next }: { id: string; next: string }) => setTaskStatus(id, next),
+    onMutate: async ({ id, next }) => {
+      await qc.cancelQueries({ queryKey: ["snapshot"] });
+      const previous = qc.getQueryData<Snapshot>(["snapshot"]);
+      if (previous) {
+        qc.setQueryData<Snapshot>(["snapshot"], {
+          ...previous,
+          tasks: previous.tasks.map((t) => (t.id === id ? { ...t, status: next } : t)),
+        });
+      }
+      return { previous };
+    },
+    onError: (err, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(["snapshot"], ctx.previous);
+      toast.error(err instanceof Error ? err.message : "Status change failed");
+    },
+    // Settled, not success: a failed edit must also re-sync, since the server
+    // may have applied side effects (stopping a running timer, stamping
+    // completedAt) that the optimistic patch above knows nothing about.
+    onSettled: () => qc.invalidateQueries({ queryKey: ["snapshot"] }),
+  });
 
   const toggleSubtask = useMutation({
     mutationFn: ({ id, done }: { id: string; done: boolean }) =>
@@ -244,9 +277,7 @@ export default function TasksPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          const next = done ? "Yet to Start" : "Completed";
-                          qc.invalidateQueries({ queryKey: ["snapshot"] });
-                          setTaskStatus(t.id, next).catch((err) => toast.error(err instanceof Error ? err.message : "Status change failed"));
+                          toggleStatus.mutate({ id: t.id, next: done ? "Yet to Start" : "Completed" });
                         }}
                         title={done ? "Mark not done" : "Mark completed"}
                         className={cn("shrink-0 text-zinc-300 transition-colors hover:text-zinc-600", done && "text-emerald-500")}
@@ -263,7 +294,7 @@ export default function TasksPage() {
                           <CategoryPill category={t.category} />
                           <EffortImpactTag effort={t.effort} impact={t.impact} />
                           <span className="size-2 rounded-full bg-zinc-200" style={quadDotStyle(t.effort, t.impact, snap.data?.settings.quadrantThreshold)} />
-                          <SubtaskBadge done={taskSubtasks.filter((s) => s.status === doneStatusName).length} total={taskSubtasks.length} />
+                          {snap.data ? <TaskProgress task={t} subtasks={taskSubtasks} snap={snap.data} doneNames={doneNames} /> : null}
                           {t.dueDate ? <span className={cn("text-xs tabular-nums text-zinc-400", t.dueDate < todayKey() && "font-medium text-red-500")}>{t.dueDate}</span> : null}
                         </div>
                       </div>

@@ -4,8 +4,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ListChecks } from "lucide-react";
 import { setTaskStatus } from "@/lib/client/api";
-import type { Snapshot, Task } from "@/lib/types";
-import { Pill, Select, cn } from "./ui";
+import type { Snapshot, Subtask, Task } from "@/lib/types";
+import { Pill, ProgressBar, Select, cn } from "./ui";
+import { taskProgress } from "@/lib/derive";
 
 function priorityColor(snap: Snapshot | undefined, name: string): string {
   return snap?.priorities.find((p) => p.name === name)?.color ?? "";
@@ -72,6 +73,38 @@ export function StatusSelect({
 export function EffortImpactTag({ effort, impact }: { effort: number | null; impact: number | null }) {
   if (effort === null && impact === null) return <span className="text-xs text-zinc-300">—</span>;
   return <span className="text-xs tabular-nums text-zinc-500">E{effort ?? "?"} · I{impact ?? "?"}</span>;
+}
+
+/**
+ * The inline progress indicator for a task in a list: a thin bar plus the
+ * "3/5" count it is derived from. The bar is weighted by subtask weight, the
+ * count is not — so a task can read 75% while showing 1/2, which is the point.
+ * `doneNames` is hoisted by the caller so a long list maps statuses once.
+ */
+export function TaskProgress({
+  task,
+  subtasks,
+  snap,
+  doneNames,
+  className,
+}: {
+  task: Task;
+  subtasks: Subtask[];
+  snap: Snapshot;
+  doneNames?: Set<string>;
+  className?: string;
+}) {
+  const p = taskProgress(task, subtasks, snap, doneNames);
+  // Nothing to say about a task with no subtasks that has not been started.
+  if (p.source === "status" && p.pct === 0) return null;
+  return (
+    <span className={cn("inline-flex min-w-28 items-center gap-2", className)}>
+      <ProgressBar pct={p.pct} size="xs" className="w-16" label={`${task.title} progress`} />
+      <span className={cn("text-xs tabular-nums", p.pct >= 100 ? "text-emerald-600" : "text-zinc-400")}>
+        {p.total > 0 ? `${p.done}/${p.total}` : `${p.pct}%`}
+      </span>
+    </span>
+  );
 }
 
 /** "3/5 subtasks" — a quick-glance progress badge, shown wherever a task appears in a list or board. */

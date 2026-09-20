@@ -1,6 +1,7 @@
 "use client";
 
 import type { Snapshot } from "@/lib/types";
+import { ProgressBar as Bar } from "./ui";
 
 export interface ProjectStats {
   tasks: number;
@@ -21,14 +22,7 @@ export function projectStats(snap: Snapshot, projectId: string, doneNames: Set<s
   };
 }
 
+/** Count-based wrapper over the shared bar, kept so the project pages read the same as before. */
 export function ProgressBar({ done, total, color }: { done: number; total: number; color?: string }) {
-  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
-  return (
-    <div className="mt-3">
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
-        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color || "#18181b" }} />
-      </div>
-      <p className="mt-1 text-right text-xs tabular-nums text-zinc-400">{pct}%</p>
-    </div>
-  );
+  return <Bar pct={total === 0 ? 0 : (done / total) * 100} showLabel color={color} className="mt-3" />;
 }

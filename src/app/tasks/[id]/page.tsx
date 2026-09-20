@@ -36,7 +36,8 @@ import { remainingAgainstEstimate, summarizeTaskTime } from "@/lib/domain/timer"
 import { useNow } from "@/hooks/use-app";
 import { formatDateLabel, formatHM, formatHMS, toDateTimeLocalInput } from "@/lib/time";
 import type { Snapshot, Task, TimeEntry } from "@/lib/types";
-import { Button, Card, Empty, Field, Input, Pill, Select, SectionHeading, Textarea, cn } from "@/components/ui";
+import { subtaskProgress, doneStatusNames } from "@/lib/derive";
+import { Button, Card, Empty, Field, Input, Pill, ProgressBar, Select, SectionHeading, Textarea, cn } from "@/components/ui";
 import { QueryState } from "@/components/page-states";
 import { PriorityPill, StatusSelect } from "@/components/task-fragments";
 import { TimerControl } from "@/components/timer-control";
@@ -388,10 +389,18 @@ function SubtasksCard({
     mutationFn: (id: string) => deleteSubtask(id),
     onSuccess: onChanged,
   });
+  const progress = subtaskProgress(subtasks, doneStatusNames(snap));
+
+  const setWeight = useMutation({
+    mutationFn: ({ id, weight }: { id: string; weight: number | null }) => updateSubtask(id, { weight }),
+    onSuccess: onChanged,
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Could not set weight"),
+  });
 
   return (
     <Card>
       <SectionHeading title={`Subtasks${subtasks.length > 0 ? ` (${subtasks.filter((s) => s.status === doneStatus).length}/${subtasks.length})` : ""}`} />
+      {subtasks.length > 0 ? <ProgressBar pct={progress.pct} size="md" showLabel label="Weighted completion" className="mb-3" /> : null}
       {subtasks.length > 0 ? (
         <ul className="mb-3 divide-y divide-zinc-100">
           {subtasks.map((s) => {
@@ -408,6 +417,11 @@ function SubtasksCard({
                   <Check className="size-3.5" />
                 </button>
                 <span className={cn("min-w-0 flex-1 truncate text-sm", done ? "text-zinc-400 line-through" : "text-zinc-800")}>{s.title}</span>
+                <WeightPicker
+                  value={s.weight}
+                  disabled={setWeight.isPending}
+                  onChange={(weight) => setWeight.mutate({ id: s.id, weight })}
+                />
                 {s.estimateMinutes !== null ? <span className="shrink-0 text-xs tabular-nums text-zinc-400">{formatHM(s.estimateMinutes * 60)}</span> : null}
                 <button onClick={() => remove.mutate(s.id)} className="shrink-0 text-zinc-300 hover:text-red-500" aria-label="Delete subtask">
                   <Trash2 className="size-3.5" />
@@ -644,5 +658,50 @@ function AddNoteCard({ taskId, onChanged }: { taskId: string; onChanged: () => v
         </form>
       ) : null}
     </Card>
+  );
+}
+
+const WEIGHTS: { value: number; label: string; title: string }[] = [
+  { value: 1, label: "S", title: "Small — counts once" },
+  { value: 2, label: "M", title: "Medium — counts double" },
+  { value: 3, label: "L", title: "Large — counts triple" },
+];
+
+/**
+ * Rates how much of the task a subtask represents. Clicking the active size
+ * clears it back to unrated, which is the same as Small for the maths but
+ * records that nobody has judged it yet.
+ */
+function WeightPicker({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: number | null;
+  onChange: (weight: number | null) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <span className="flex shrink-0 items-center rounded-md border border-zinc-200 p-0.5">
+      {WEIGHTS.map((w) => {
+        const active = value === w.value;
+        return (
+          <button
+            key={w.value}
+            type="button"
+            disabled={disabled}
+            title={w.title}
+            aria-pressed={active}
+            onClick={() => onChange(active ? null : w.value)}
+            className={cn(
+              "w-5 rounded text-[10px] font-semibold leading-5 transition-colors",
+              active ? "bg-zinc-900 text-white" : "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+            )}
+          >
+            {w.label}
+          </button>
+        );
+      })}
+    </span>
   );
 }

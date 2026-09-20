@@ -99,6 +99,7 @@ export const SUBTASKS_TABLE: TableSpec = {
     col("Task ID", "taskId"),
     col("Title", "title", ["subtask"]),
     col("Status", "status"),
+    col("Weight", "weight"),
     col("Estimate (min)", "estimateMinutes"),
     col("Order", "order"),
     col("Notes", "notes"),
