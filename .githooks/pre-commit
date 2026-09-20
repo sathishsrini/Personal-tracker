@@ -6,25 +6,31 @@
 # Enable with: npm run hooks:install
 # Bypass (only when you are certain): git commit --no-verify
 #
-# The bracket groups below ([ ] and [_]) match the real thing but stop this
-# file from matching itself — otherwise the guard blocks its own commit.
-
-KEY_PATTERN='BEGIN ([A-Z]+ )*PRIVATE[ ]KEY|"private[_]key[_]id"|"type": *"service[_]account"'
+# The pattern has three arms because grep is line-based:
+#   1. a PEM header at end of line  -> a real multi-line key file
+#   2. a header followed by real base64 -> a key inlined in .env or JSON
+#   3. service-account JSON field names
+# The bracket groups ([ ], [_]) keep this file from matching itself, and
+# requiring actual key material keeps the documented placeholder in
+# .env.example from tripping the guard.
+KEY_PATTERN='PRIVATE[ ]KEY-----$|PRIVATE[ ]KEY-----[^A-Za-z0-9+/]{0,8}[A-Za-z0-9+/]{40,}|"private[_]key[_]id"|"type": *"service[_]account"'
 
 staged=$(git diff --cached --name-only --diff-filter=ACM)
 [ -z "$staged" ] && exit 0
 
 fail=0
 
-# 1. Any file under credentials/ or a dotenv file, regardless of extension.
-blocked=$(printf '%s\n' "$staged" | grep -E '(^|/)credentials/|(^|/)\.env($|\.)' || true)
+# 1. Anything under credentials/, or a dotenv file that is not a template.
+blocked=$(printf '%s\n' "$staged" \
+  | grep -E '(^|/)credentials/|(^|/)\.env($|\.)' \
+  | grep -vE '(^|/)\.env\.(example|sample|template)$' || true)
 if [ -n "$blocked" ]; then
   echo "pre-commit: refusing to commit credential/env files:" >&2
   printf '  %s\n' $blocked >&2
   fail=1
 fi
 
-# 2. Private-key material or a service-account blob in the staged content.
+# 2. Key material in the staged content itself.
 for f in $staged; do
   case "$f" in
     package-lock.json|*.min.js|*.map|.githooks/*|.github/workflows/*) continue ;;

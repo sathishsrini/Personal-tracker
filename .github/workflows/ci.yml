@@ -52,7 +52,7 @@ jobs:
       # The bracket groups match real key material without matching this file.
       - name: Scan history for private keys
         run: |
-          PAT='BEGIN ([A-Z]+ )*PRIVATE[ ]KEY|"private[_]key[_]id"'
+          PAT='PRIVATE[ ]KEY-----$|PRIVATE[ ]KEY-----[^A-Za-z0-9+/]{0,8}[A-Za-z0-9+/]{40,}|"private[_]key[_]id"|"type": *"service[_]account"'
           if git grep -nIE "$PAT" $(git rev-list --all) \
                -- . ':(exclude)package-lock.json' ':(exclude).github/workflows/*' \
                ':(exclude).githooks/*' > hits.txt 2>/dev/null; then
