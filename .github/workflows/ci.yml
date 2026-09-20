@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # `npm ci` installs exactly what the lockfile pins — unlike `npm install`,
+      # it cannot silently pull a newer Next/React minor than anyone tested.
+      - run: npm ci
+
+      - run: npm run lint
+
+      # The build must run before typecheck: tsconfig includes .next/types/**,
+      # which does not exist on a fresh checkout. Typechecking first would pass
+      # while silently skipping every generated route type.
+      - run: npm run build
+        env:
+          STORAGE_DRIVER: local
+
+      - run: npm run typecheck
+
+      - run: npm run test:coverage
+        env:
+          STORAGE_DRIVER: local
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Backstop for the pre-commit hook: the hook can be bypassed with
+      # --no-verify, or skipped by a clone that never ran `npm run hooks:install`.
+      # The bracket groups match real key material without matching this file.
+      - name: Scan history for private keys
+        run: |
+          PAT='BEGIN ([A-Z]+ )*PRIVATE[ ]KEY|"private[_]key[_]id"'
+          if git grep -nIE "$PAT" $(git rev-list --all) \
+               -- . ':(exclude)package-lock.json' ':(exclude).github/workflows/*' \
+               ':(exclude).githooks/*' > hits.txt 2>/dev/null; then
+            echo "::error::Private-key material found in git history:"
+            cut -c1-200 hits.txt
+            exit 1
+          fi
+          echo "No private-key material found in history."

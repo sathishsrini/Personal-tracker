@@ -1,0 +1,43 @@
+#!/bin/sh
+# Secret guard. Blocks the two ways this repo has actually leaked before:
+# a service-account key under credentials/, and a raw private key pasted
+# into any file. Runs on staged content only, so it stays fast.
+#
+# Enable with: npm run hooks:install
+# Bypass (only when you are certain): git commit --no-verify
+#
+# The bracket groups below ([ ] and [_]) match the real thing but stop this
+# file from matching itself — otherwise the guard blocks its own commit.
+
+KEY_PATTERN='BEGIN ([A-Z]+ )*PRIVATE[ ]KEY|"private[_]key[_]id"|"type": *"service[_]account"'
+
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$staged" ] && exit 0
+
+fail=0
+
+# 1. Any file under credentials/ or a dotenv file, regardless of extension.
+blocked=$(printf '%s\n' "$staged" | grep -E '(^|/)credentials/|(^|/)\.env($|\.)' || true)
+if [ -n "$blocked" ]; then
+  echo "pre-commit: refusing to commit credential/env files:" >&2
+  printf '  %s\n' $blocked >&2
+  fail=1
+fi
+
+# 2. Private-key material or a service-account blob in the staged content.
+for f in $staged; do
+  case "$f" in
+    package-lock.json|*.min.js|*.map|.githooks/*|.github/workflows/*) continue ;;
+  esac
+  if git show ":$f" 2>/dev/null | grep -qE "$KEY_PATTERN"; then
+    echo "pre-commit: private-key material detected in $f" >&2
+    fail=1
+  fi
+done
+
+if [ "$fail" -ne 0 ]; then
+  echo "" >&2
+  echo "Nothing was committed. Move the secret out of the tree, or use --no-verify if this is a false positive." >&2
+  exit 1
+fi
+exit 0

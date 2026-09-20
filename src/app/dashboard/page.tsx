@@ -128,7 +128,7 @@ function DashboardBody({ snap, now, today }: { snap: Snapshot; now: number; toda
                       <span className="block truncate text-sm font-medium text-zinc-900">{task.title}</span>
                       <span className="mt-0.5 flex items-center gap-1.5 text-xs text-zinc-400">
                         {reasons.slice(0, 3).join(" · ")}
-                        {!fitsRemaining ? <span className="text-amber-600">· won't fit today</span> : null}
+                        {!fitsRemaining ? <span className="text-amber-600">· won&apos;t fit today</span> : null}
                       </span>
                     </span>
                     <PriorityPill snap={snap} priority={task.priority} />

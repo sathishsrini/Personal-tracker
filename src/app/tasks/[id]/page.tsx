@@ -546,8 +546,8 @@ function ManualEntryForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const [checkIn, setCheckIn] = useState(entry ? toDateTimeLocalInput(entry.checkIn) : toDateTimeLocalInput(Date.now() - 30 * 60_000));
-  const [checkOut, setCheckOut] = useState(entry?.checkOut ? toDateTimeLocalInput(entry.checkOut) : toDateTimeLocalInput(Date.now()));
+  const [checkIn, setCheckIn] = useState(() => (entry ? toDateTimeLocalInput(entry.checkIn) : toDateTimeLocalInput(Date.now() - 30 * 60_000)));
+  const [checkOut, setCheckOut] = useState(() => (entry?.checkOut ? toDateTimeLocalInput(entry.checkOut) : toDateTimeLocalInput(Date.now())));
   const [tag, setTag] = useState(entry?.tag ?? tags[0] ?? "Other");
   const [note, setNote] = useState(entry?.note ?? "");
 

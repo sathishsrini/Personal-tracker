@@ -36,7 +36,7 @@ function write(ops: QueuedOp[]): void {
 }
 
 let seq = 0;
-let listeners = new Set<() => void>();
+const listeners = new Set<() => void>();
 
 function emit(): void {
   for (const fn of listeners) fn();

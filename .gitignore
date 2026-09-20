@@ -1,11 +1,25 @@
+# dependencies
 node_modules
+
+# next.js build output
 .next
 out
-.env
-.env.local
 *.tsbuildinfo
 next-env.d.ts
+
+# test/coverage output
+coverage
+
+# local data + secrets — never commit these
 /data/
-credentials/*.json
-dev.log
-run*.log
+.env
+.env.local
+.env.*.local
+credentials/
+
+# logs
+*.log
+
+# editor / OS
+.DS_Store
+.idea

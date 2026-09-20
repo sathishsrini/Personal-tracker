@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AlertTriangle, ChevronLeft, ChevronRight, Clock, MoveRight, Plus, Trash2 } from "lucide-react";
-import { useSnapshot } from "@/hooks/use-app";
+import { useSnapshot, useNow } from "@/hooks/use-app";
 import { fetchDailyPlan, saveDailyPlan, carryForward, type PlanItemLike } from "@/lib/client/api";
 import { summarizePlan } from "@/lib/domain/plan";
 import { entrySeconds } from "@/lib/domain/timer";
@@ -132,7 +132,7 @@ function DailyPlannerBody({ snap, date }: { snap: Snapshot; date: string }) {
     snap.settings.workdayHours * 60
   );
   const carrySuggestions = snap.carry.filter((c) => c.targetDate === date && !plannedTaskIds.has(c.taskId));
-  const now = Date.now();
+  const now = useNow(30_000);
 
   function persist(next: PlanItemLike[]) {
     setItems(next);
@@ -189,7 +189,7 @@ function DailyPlannerBody({ snap, date }: { snap: Snapshot; date: string }) {
         {summary.overAllocated ? (
           <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
             <AlertTriangle className="size-3.5 shrink-0" />
-            Planned time exceeds today's available hours by {formatHM(summary.overByMinutes * 60)}.
+            Planned time exceeds today&apos;s available hours by {formatHM(summary.overByMinutes * 60)}.
           </div>
         ) : null}
       </Card>

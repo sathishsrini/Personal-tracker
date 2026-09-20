@@ -229,7 +229,7 @@ export default function TasksPage() {
           <Card className="p-0">
             <ul className="divide-y divide-zinc-100">
               {visible.map((t) => {
-                const total = summarizeTaskTime(snap.data?.entries.filter((e) => e.taskId === t.id) ?? [], t.id, Date.now()).totalSeconds;
+                const total = summarizeTaskTime(snap.data?.entries.filter((e) => e.taskId === t.id) ?? [], t.id, now).totalSeconds;
                 const done = ["Completed", "Closed"].includes(t.status);
                 const taskSubtasks = (snap.data?.subtasks ?? []).filter((s) => s.taskId === t.id);
                 const project = (snap.data?.projects ?? []).find((p) => p.id === t.projectId);
